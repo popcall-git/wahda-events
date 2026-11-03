@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wahda Prototype · Events</title>
+<style>
+  :root{
+    color-scheme:only light;
+    --brand:#0E7C66; --brand-dark:#0A5D4E; --brand-soft:#E3F2EE;
+    --ink:#1C1B18; --ink-2:#6B6A66; --ink-3:#9B9993;
+    --bg:#F4F2EE; --card:#FFFFFF; --line:#E5E2DC;
+    --danger:#D64545; --gold:#C9A24B; --gold-soft:#FBF5E6;
+    --r-lg:16px; --r-md:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"PingFang SC","Helvetica Neue",sans-serif;
+    background:#ECEAE4;color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 16px 60px}
+
+  .page-head{width:100%;max-width:430px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+  .page-head h1{font-size:15px;font-weight:600;color:#3A3934;white-space:nowrap}
+  .head-actions{display:flex;align-items:center;gap:8px}
+  .lang-toggle{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;font-size:13px;
+    font-weight:600;color:var(--brand);cursor:pointer;font-family:inherit;min-width:64px}
+
+  /* ═══ phone ═══ */
+  .phone{width:390px;max-width:100%;height:800px;background:var(--bg);border-radius:44px;border:10px solid #161513;
+    box-shadow:0 24px 60px rgba(0,0,0,.18);position:relative;overflow:hidden;display:flex;flex-direction:column;
+    transform:translateZ(0);isolation:isolate}
+  .statusbar{height:44px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 4px;
+    font-size:12px;font-weight:600;color:var(--ink);position:relative;z-index:50}
+  .statusbar .sb-r{letter-spacing:.5px}
+  .screen-wrap{flex:1;position:relative;overflow:hidden}
+  .page{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg)}
+  .page.active{display:flex;animation:slidein .26s ease;z-index:10}
+  @keyframes slidein{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+  .page.back-anim{animation:slideback .26s ease}
+  @keyframes slideback{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
+  .scroll{flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:22px}
+  /* 带 tabbar + FAB 的页面，底部留出足够空间，避免最后一张卡被压住 */
+  #pg-home .scroll,#pg-my .scroll{padding-bottom:100px}
+  .scroll::-webkit-scrollbar{display:none}
+
+  /* ═══ nav ═══ */
+  .navbar{flex:none;display:flex;align-items:center;gap:8px;padding:2px 12px 8px;min-height:46px}
+  .nav-title{font-size:17px;font-weight:700;flex:1;padding-left:8px}
+  .back-btn{width:40px;height:40px;border:none;background:none;border-radius:20px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;color:var(--ink);font-family:inherit;font-size:22px}
+  .icon-btn{width:40px;height:40px;border:1px solid var(--line);background:#fff;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);font-size:15px;font-family:inherit}
+
+  /* ═══ generic ═══ */
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;padding:18px 20px 10px}
+  .sec-h h3{font-size:15px;font-weight:700;letter-spacing:-.1px}
+  .sec-h .more{font-size:12px;color:var(--ink-3);font-weight:500}
+  .rail{display:flex;gap:11px;overflow-x:auto;padding:0 20px 6px;scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+  .card{background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line)}
+
+  /* ═══ search ═══ */
+  .search{margin:0 20px 12px;height:40px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    display:flex;align-items:center;gap:8px;padding:0 13px;color:var(--ink-3);font-size:13px}
+  .search input{flex:1;border:none;outline:none;background:none;font-family:inherit;font-size:13px;color:var(--ink)}
+  .search input::placeholder{color:var(--ink-3)}
+
+  /* ═══ location bar ═══ */
+  .locbar{margin:0 20px 12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 13px;
+    display:flex;align-items:center;gap:10px;cursor:pointer}
+  .locbar .lb-ic{width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+    display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+  .locbar .lb-main{flex:1;min-width:0}
+  .locbar .lb-t{font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px}
+  .locbar .lb-s{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+  .locbar .lb-act{font-size:11.5px;font-weight:700;color:var(--brand);background:var(--brand-soft);
+    border-radius:999px;padding:5px 11px;flex:none}
+
+  /* ═══ seg ═══ */
+  .seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px;margin:0 20px 14px}
+  .seg button{border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink-3);
+    padding:7px 0;border-radius:999px;cursor:pointer;white-space:nowrap;flex:1}
+  .seg button.on{background:var(--brand);color:#fff}
+
+  /* ═══ banner (featured rail) —— 真实封面图 ═══ */
+  .bn{flex:0 0 272px;height:172px;border-radius:18px;padding:14px 15px;color:#fff;position:relative;
+    overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer;
+    background:#1C1B18;box-shadow:0 6px 18px rgba(28,27,24,.16)}
+  .bn-img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;z-index:0}
+  .bn-scr{position:absolute;left:0;top:0;right:0;bottom:0;z-index:1;
+    background:linear-gradient(180deg,rgba(12,12,10,.04) 0%,rgba(12,12,10,.26) 40%,rgba(12,12,10,.90) 100%)}
+  .bn-em{display:none}
+  .bn-tag{position:absolute;top:13px;left:14px;font-size:10px;font-weight:800;letter-spacing:.6px;
+    background:rgba(255,255,255,.95);color:#141310;border-radius:6px;padding:4px 9px;z-index:2;
+    text-transform:uppercase;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  .bn-t{font-size:16.5px;font-weight:800;line-height:1.24;position:relative;z-index:2;padding-right:8px;
+    text-shadow:0 1px 8px rgba(0,0,0,.5);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bn-s{font-size:11px;opacity:.93;margin-top:5px;position:relative;z-index:2;line-height:1.4;padding-right:8px}
+  .bn-org{opacity:.86;font-size:10.5px;max-width:170px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .bn-f{position:absolute;bottom:13px;right:14px;font-size:11.5px;font-weight:800;z-index:2;
+    background:rgba(255,255,255,.96);color:#141310;border-radius:999px;padding:4px 10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.20)}
+
+  /* ═══ category rail —— 圆形封面 ═══ */
+  .cat{flex:0 0 auto;width:60px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+  .cico{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:21px;color:#fff;flex:none;border:2px solid #fff;position:relative;overflow:hidden;
+    background:#E9E6E0;box-shadow:0 4px 10px rgba(28,27,24,.14)}
+  .cico img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block}
+  .cico .cem{position:relative;z-index:2;line-height:1}
+  .cico.hasimg .cem{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    background:rgba(14,124,102,.32);text-shadow:0 1px 5px rgba(0,0,0,.55)}
+  .cat.on .cico{box-shadow:0 0 0 3px var(--brand-soft),0 4px 10px rgba(14,124,102,.22);border-color:var(--brand)}
+  .cat span{font-size:10px;color:var(--ink-2);text-align:center;line-height:1.18;width:100%;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .cat.on span{color:var(--brand)}
+
+  /* ═══ event card ═══ */
+  .ecard{margin:0 20px 12px;background:#fff;border:1px solid rgba(28,27,24,.07);border-radius:16px;padding:10px;
+    display:flex;gap:12px;cursor:pointer;position:relative;box-shadow:0 2px 10px rgba(28,27,24,.05)}
+  .ec-thumb{width:84px;height:84px;border-radius:14px;flex:none;position:relative;overflow:hidden;
+    background:#E9E6E0;box-shadow:0 2px 8px rgba(28,27,24,.10)}
+  .ec-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .ec-body{flex:1;min-width:0;display:flex;flex-direction:column}
+  .ec-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .ec-cat{font-size:10px;font-weight:800;color:var(--brand);letter-spacing:.4px;text-transform:uppercase}
+  .ec-reason{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--gold-soft);color:#8A6A22}
+  .ec-reason.near{background:var(--brand-soft);color:var(--brand)}
+  .ec-title{font-size:13.5px;font-weight:700;line-height:1.32;margin-bottom:5px;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ec-meta{font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;gap:5px;margin-bottom:2px}
+  .ec-bot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:5px}
+  .ec-price{font-size:13px;font-weight:800;color:var(--brand)}
+  .ec-price.free{color:var(--gold)}
+  .ec-org{font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+  .ec-fav{position:absolute;top:10px;right:10px;font-size:15px;color:#C9C6BF;cursor:pointer;z-index:2}
+  .ec-fav.on{color:var(--danger)}
+  .ec-soc{font-size:11px;color:var(--ink-3);display:flex;align-items:center;gap:7px;margin-top:3px}
+  .ec-left{font-size:10px;font-weight:800;color:var(--danger);background:#FDECEA;border-radius:999px;padding:1.5px 6px}
+
+  /* ═══ 行式列表（首页推荐 / Nearby）═══ */
+  #eventList{margin:2px 20px 0;background:#fff;border-radius:16px;overflow:hidden;
+    box-shadow:0 1px 8px rgba(28,27,24,.06)}
+  .evrow{display:flex;gap:12px;align-items:center;padding:11px 13px;cursor:pointer;position:relative;
+    border-bottom:1px solid #F1EFEA;background:#fff}
+  .evrow:last-child{border-bottom:none}
+  .evrow:active{background:#F8F6F2}
+  .rw-img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:none;
+    box-shadow:0 2px 8px rgba(28,27,24,.10);background:#E9E6E0}
+  .rw-body{flex:1;min-width:0}
+  .rw-t{font-size:13.5px;font-weight:700;line-height:1.28;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;padding-right:24px}
+  .rw-m{font-size:11px;color:var(--ink-3);margin-top:3px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .rw-b{display:flex;align-items:center;gap:7px;margin-top:5px;min-width:0}
+  .rw-cat{font-size:9.5px;font-weight:800;color:var(--brand);letter-spacing:.4px;text-transform:uppercase;flex:none}
+  .rw-tag{font-size:9.5px;font-weight:700;padding:1.5px 7px;border-radius:999px;background:var(--gold-soft);
+    color:#8A6A22;flex:none}
+  .rw-tag.near{background:var(--brand-soft);color:var(--brand)}
+  .rw-soc{font-size:10.5px;color:var(--ink-3);flex:none}
+  .rw-left{font-size:9.5px;font-weight:800;color:var(--danger);flex:none}
+  .rw-price{margin-left:auto;font-size:12px;font-weight:800;color:var(--ink);flex:none;
+    white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+  .rw-price.free{color:var(--gold)}
+  .rw-fav{position:absolute;top:8px;right:11px;font-size:14px;color:#C9C6BF;cursor:pointer;z-index:2}
+  .rw-fav.on{color:var(--danger)}
+
+  /* ═══ empty ═══ */
+  .empty{margin:0 20px;background:#fff;border:1px dashed #DCD9D2;border-radius:14px;padding:22px 18px;text-align:center}
+  #eventList .empty{margin:0;border:1px dashed #DCD9D2;border-radius:0;box-shadow:none}
+  .empty b{font-size:13px;font-weight:700;display:block;margin-bottom:5px}
+  .empty p{font-size:11.5px;color:var(--ink-3);line-height:1.55}
+
+  /* ═══ tabbar ═══ */
+  .tabbar{flex:none;display:flex;background:#fff;border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom)}
+  .tab{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    border:none;background:none;color:var(--ink-3);font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .tab svg{width:22px;height:22px}
+  .tab.active{color:var(--brand)}
+
+  /* ═══ 浮动创建按钮 (FAB) ═══ */
+  .fab{position:absolute;right:18px;bottom:calc(72px + env(safe-area-inset-bottom));
+    width:54px;height:54px;border-radius:50%;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;z-index:80;cursor:pointer;
+    box-shadow:0 7px 20px rgba(14,124,102,.44),0 2px 6px rgba(14,124,102,.28);
+    transition:transform .16s ease,opacity .18s ease}
+  .fab svg{width:26px;height:26px}
+  .fab:active{transform:scale(.92)}
+  .fab.hidden{opacity:0;pointer-events:none;transform:scale(.6)}
+  .fab::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(14,124,102,.18)}
+
+  /* ═══ sheet ═══ */
+  .mask{position:absolute;inset:0;background:rgba(20,19,17,.42);opacity:0;pointer-events:none;
+    transition:opacity .22s;z-index:100}
+  .mask.on{opacity:1;pointer-events:auto}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;z-index:101;
+    transform:translateY(102%);transition:transform .28s cubic-bezier(.32,.72,0,1);padding:8px 20px 22px;
+    max-height:76%;overflow-y:auto;scrollbar-width:none}
+  .sheet::-webkit-scrollbar{display:none}
+  .sheet.on{transform:none}
+  .grab{width:38px;height:4px;border-radius:2px;background:#DCD9D2;margin:0 auto 14px}
+  .sheet h4{font-size:16px;font-weight:700;margin-bottom:4px}
+  .sheet .sh-sub{font-size:11.5px;color:var(--ink-3);margin-bottom:15px;line-height:1.45}
+  .sopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;
+    border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;font-family:inherit}
+  .sopt.on{border-color:var(--brand);background:#F0F8F5}
+  .sopt-t{flex:1;min-width:0}
+  .sopt-t b{font-size:13.5px;font-weight:700;display:block}
+  .sopt-t span{font-size:11.5px;color:var(--ink-2);margin-top:3px;display:block;line-height:1.4}
+  .sopt-em{font-size:19px;flex:none}
+  .radio{width:20px;height:20px;border-radius:50%;border:2px solid #C9C6BF;flex:none;position:relative}
+  .sopt.on .radio{border-color:var(--brand);background:var(--brand)}
+  .sopt.on .radio::after{content:"";position:absolute;inset:4.5px;border-radius:50%;background:#fff}
+  .sopt.back{border:none;background:none;padding:8px 0;margin-bottom:10px;color:var(--brand);
+    font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+
+  /* ═══ detail ═══ */
+  .dhero{height:224px;position:relative;display:flex;align-items:flex-end;padding:16px 18px;color:#fff;
+    flex:none;background:#1C1B18;overflow:hidden}
+  .dhero .dh-img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;z-index:0}
+  .dhero .dh-scr{position:absolute;left:0;top:0;right:0;bottom:0;z-index:1;
+    background:linear-gradient(180deg,rgba(12,12,10,.44) 0%,rgba(12,12,10,.06) 36%,rgba(12,12,10,.84) 100%)}
+  .dhero .dh-em{display:none}
+  .dhero .dh-top{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;
+    justify-content:space-between;z-index:3}
+  .dh-round{width:36px;height:36px;border-radius:50%;background:rgba(20,19,17,.34);color:#fff;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;font-size:17px;font-family:inherit;border:none;
+    backdrop-filter:blur(6px)}
+  .dh-round.on{background:#fff;color:var(--danger)}
+  .dh-top-r{display:flex;gap:8px}
+  .dhero .dh-cat{font-size:10.5px;font-weight:800;letter-spacing:.5px;background:rgba(255,255,255,.92);
+    color:var(--brand);border-radius:6px;padding:4px 9px;position:relative;z-index:2;text-transform:uppercase}
+  .dbody{padding:16px 20px 0}
+  .dtitle{font-size:20px;font-weight:800;line-height:1.22;letter-spacing:-.3px;margin-bottom:10px}
+  .dorg{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .dorg .do-av{width:38px;height:38px;border-radius:50%;background:var(--brand-soft);display:flex;
+    align-items:center;justify-content:center;font-size:19px;flex:none}
+  .dorg .do-n{font-size:13px;font-weight:700}
+  .dorg .do-s{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .kv{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid #F1EFEA;font-size:13px}
+  .kv:last-child{border-bottom:none}
+  .kv .k-ic{width:20px;text-align:center;color:var(--brand);font-size:14px;flex:none}
+  .kv .k-l{font-size:11px;color:var(--ink-3)}
+  .kv .k-v{font-size:13px;font-weight:600}
+  .kv .k-main{flex:1;min-width:0}
+  .dsec{font-size:15px;font-weight:700;margin:18px 0 9px}
+  .dabout{font-size:13px;color:var(--ink-2);line-height:1.62}
+  .tier{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;
+    border:1px solid var(--line);border-radius:14px;margin-bottom:9px;background:#fff}
+  .tier-n{font-size:13.5px;font-weight:700}
+  .tier-s{font-size:11px;color:var(--ink-3);margin-top:2px}
+  .tier-p{font-size:13.5px;font-weight:800;color:var(--brand)}
+  .cta{flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px 18px;background:#fff;
+    border-top:1px solid var(--line)}
+  .cta-price{font-size:11px;color:var(--ink-3);line-height:1.2}
+  .cta-price b{display:block;font-size:19px;color:var(--brand);font-weight:800}
+  .btn{flex:1;min-height:48px;background:var(--brand);color:#fff;border:none;border-radius:14px;
+    font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn:active{background:var(--brand-dark)}
+  .btn.danger{background:var(--danger)}
+  .btn:disabled{opacity:.45}
+
+  /* ═══ my tabs ═══ */
+  .mtabs{display:flex;gap:8px;overflow-x:auto;padding:0 20px 10px;scrollbar-width:none;flex:none}
+  .mtabs::-webkit-scrollbar{display:none}
+  .mtab{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;
+    border:1.5px solid var(--line);background:#fff;font-size:12px;font-weight:600;color:var(--ink-2);
+    cursor:pointer;font-family:inherit;white-space:nowrap}
+  .mtab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .mtab .cnt{font-size:10px;font-weight:800;background:var(--brand-soft);color:var(--brand);
+    border-radius:999px;padding:1px 6px}
+  .mtab.on .cnt{background:rgba(255,255,255,.26);color:#fff}
+
+  /* ═══ form ═══ */
+  .form{padding:0 20px}
+  .fs{margin-bottom:18px}
+  .fs-t{font-size:12px;font-weight:800;color:var(--ink-2);margin-bottom:9px;display:flex;align-items:center;gap:6px;
+    letter-spacing:.2px}
+  .fld{margin-bottom:11px}
+  .fld label{font-size:11px;font-weight:700;color:var(--ink-2);display:block;margin-bottom:6px}
+  .fld input,.fld textarea,.fld select{width:100%;border:1.5px solid var(--line);border-radius:12px;
+    padding:11px 12px;font-size:13px;color:var(--ink);background:#fff;outline:none;font-family:inherit}
+  .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--brand)}
+  .fld textarea{min-height:74px;resize:none}
+  .frow{display:flex;gap:10px}
+  .frow .fld{flex:1}
+  .te{border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#fff}
+  .te-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+  .te-n{font-size:13px;font-weight:700}
+  .te-d{font-size:11.5px;color:var(--danger);font-weight:700;cursor:pointer}
+  .addtier{width:100%;min-height:44px;border:1.5px dashed var(--brand);background:var(--brand-soft);
+    color:var(--brand);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .covpick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .covpick .cov{aspect-ratio:1;border:2px solid var(--line);border-radius:11px;background:#fff;overflow:hidden;
+    padding:0;position:relative}
+  .covpick .cov img{width:100%;height:100%;object-fit:cover;display:block}
+    font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;padding:0}
+  .covpick .cov.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)}
+  .covpick .cov.on::after{content:"✓";position:absolute;right:3px;bottom:1px;width:16px;height:16px;
+    border-radius:50%;background:var(--brand);color:#fff;font-size:10px;font-weight:800;
+    display:flex;align-items:center;justify-content:center}
+  .note{font-size:11.5px;color:var(--ink-3);line-height:1.55;background:#FAF9F6;border:1px solid var(--line);
+    border-radius:11px;padding:10px 12px}
+  .summ{background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px 14px;margin-bottom:16px}
+  .summ-r{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F1EFEA;font-size:12px}
+  .summ-r:last-child{border-bottom:none}
+  .summ-r span{color:var(--ink-3)}
+  .summ-r b{font-weight:700}
+
+  /* ═══ checkout ═══ */
+  .qty{display:flex;align-items:center;gap:11px}
+  .qb{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:#fff;
+    font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font-family:inherit}
+  .qb:disabled{opacity:.3}
+  .qv{font-size:13.5px;font-weight:800;min-width:20px;text-align:center}
+
+  /* ═══ 订单（30 分钟有效期）═══ */
+  .cdbanner{margin:0 20px 14px;background:var(--gold-soft);border:1px solid #EADFC2;border-radius:14px;
+    padding:12px 14px;display:flex;align-items:center;gap:11px}
+  .cdbanner .cd-ic{font-size:19px;flex:none}
+  .cdbanner .cd-txt{flex:1;font-size:11.5px;color:#8A6A22;line-height:1.45;font-weight:600}
+  .cdbanner .cd-time{font-size:17px;font-weight:800;color:#8A6A22;font-variant-numeric:tabular-nums;
+    letter-spacing:.5px;flex:none}
+  .cdbanner.expired{background:#F4F1EC;border-color:var(--line)}
+  .cdbanner.expired .cd-txt{color:var(--ink-3)}
+  .cdbanner.expired .cd-ic{filter:grayscale(1);opacity:.55}
+
+  .payopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;
+    border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;
+    font-family:inherit}
+  .payopt.on{border-color:var(--brand);background:#F0F8F5}
+  .payopt .po-ic{width:38px;height:38px;border-radius:11px;background:#FAF9F6;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+  .payopt.on .po-ic{background:var(--brand-soft);border-color:transparent}
+  .po-t{flex:1;min-width:0}
+  .po-t b{font-size:13.5px;font-weight:700;display:block}
+  .po-t span{font-size:11px;color:var(--ink-3);margin-top:2px;display:block}
+  .po-badge{font-size:10px;font-weight:800;color:var(--brand);background:var(--brand-soft);
+    border-radius:999px;padding:3px 8px;flex:none}
+
+  /* ═══ 电子票 ═══ */
+  .okhero{margin:0 20px 16px;background:var(--brand-soft);border:1px solid #CFE7E0;border-radius:16px;
+    padding:14px;display:flex;gap:12px;align-items:center}
+  .okhero .ok-ic{width:40px;height:40px;border-radius:50%;background:var(--brand);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:19px;flex:none}
+  .okhero .ok-t{font-size:15px;font-weight:800;color:var(--brand-dark)}
+  .okhero .ok-s{font-size:11.5px;color:#4E7A6E;margin-top:2px}
+  .okhero.used{background:#F4F1EC;border-color:var(--line)}
+  .okhero.used .ok-ic{background:var(--ink-3)}
+  .okhero.used .ok-t{color:var(--ink-2)}
+
+  .tkt{margin:0 20px 14px;background:#fff;border-radius:18px;border:1px solid var(--line);overflow:hidden;
+    box-shadow:0 4px 16px rgba(28,27,24,.08);position:relative}
+  .tkt-top{padding:16px 16px 15px}
+  .tkt-name{font-size:16.5px;font-weight:800;line-height:1.28;letter-spacing:-.2px}
+  .tkt-sub{font-size:12px;color:var(--ink-2);margin-top:7px;line-height:1.55}
+  .tkt-tiers{font-size:11.5px;color:var(--ink-2);background:#FAF9F6;border-radius:9px;padding:8px 11px;
+    margin-top:11px;line-height:1.6}
+  .tkt-perf{position:relative;border-top:2px dashed #E2DFD8}
+  .tkt-perf::before,.tkt-perf::after{content:"";position:absolute;top:-11px;width:20px;height:20px;
+    border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+  .tkt-perf::before{left:-12px}
+  .tkt-perf::after{right:-12px}
+  .qrwrap{padding:18px 16px 16px;text-align:center}
+  .qrbox{width:214px;height:214px;margin:0 auto;padding:13px;border:1px solid var(--line);
+    border-radius:16px;background:#fff}
+  .qrbox svg{width:100%;height:100%;display:block}
+  .qrwrap.dim .qrbox{opacity:.22;filter:grayscale(1)}
+  .qr-cap{font-size:11px;color:var(--ink-3);margin-top:10px;font-weight:600;line-height:1.5}
+  .tkt-code{font-size:14.5px;font-weight:800;letter-spacing:2px;margin-top:8px;color:var(--ink)}
+  .tkt-bot{padding:13px 16px 16px;background:#FAF9F6}
+  .tkrow{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;padding:4.5px 0;color:var(--ink-3)}
+  .tkrow b{color:var(--ink-2);font-weight:700;text-align:right;word-break:break-all}
+
+  .chip{font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;flex:none;letter-spacing:.2px}
+  .chip.pend{background:var(--gold-soft);color:#8A6A22}
+  .chip.ok{background:var(--brand-soft);color:var(--brand)}
+  .chip.used{background:#EEECE7;color:var(--ink-2)}
+  .chip.expired{background:#F4F1EC;color:var(--ink-3)}
+  .chip.refund{background:#FDECEA;color:var(--danger)}
+
+  /* ═══ My Events 票券入口卡 ═══ */
+  .tkentry{margin:2px 20px 12px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;
+    box-shadow:0 1px 8px rgba(28,27,24,.06)}
+  .tkentry:active{background:#F8F6F2}
+  .tke-ic{width:38px;height:38px;border-radius:11px;background:var(--gold-soft);display:flex;
+    align-items:center;justify-content:center;font-size:18px;flex:none}
+  .tke-main{flex:1;min-width:0}
+  .tke-main b{font-size:13.5px;font-weight:800;display:block}
+  .tke-main span{font-size:11px;color:var(--ink-3);margin-top:2px;display:block}
+  .tke-arrow{font-size:20px;color:var(--ink-3);flex:none;line-height:1}
+  .tke-count{font-size:10.5px;font-weight:800;color:var(--brand);background:var(--brand-soft);
+    border-radius:999px;padding:2px 8px;flex:none}
+
+  .orow-actions{display:flex;gap:10px;padding:0 20px 20px}
+  .orow-actions .btn{flex:1}
+  .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+
+  /* ═══ toast ═══ */
+  .toast{position:absolute;left:50%;bottom:88px;transform:translate(-50%,16px);background:rgba(20,19,17,.92);
+    color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;
+    transition:all .24s;z-index:200;white-space:nowrap}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* ═══ 封面渐变 ═══ */
+  .g-quran{background:linear-gradient(135deg,#065A4E,#0E7C66)}
+  .g-tafsir{background:linear-gradient(135deg,#6366F1,#8B5CF6)}
+  .g-hadith{background:linear-gradient(135deg,#B45309,#D97706)}
+  .g-fiqh{background:linear-gradient(135deg,#1E293B,#475569)}
+  .g-aqeedah{background:linear-gradient(135deg,#7C3AED,#EC4899)}
+  .g-halaqah{background:linear-gradient(135deg,#10B981,#0D9488)}
+  .g-studycircle{background:linear-gradient(135deg,#0EA5E9,#14B8A6)}
+  .g-arabic{background:linear-gradient(135deg,#F472B6,#FB923C)}
+  .g-others{background:linear-gradient(135deg,#64748B,#9CA3AF)}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Wahda Prototype · Events</h1>
+  <div class="head-actions">
+    <button class="lang-toggle" id="langBtn" onclick="toggleLang()">中文</button>
+  </div>
+</div>
+
+<div class="phone">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="sb-r">📶 🔋</span>
+  </div>
+
+  <div class="screen-wrap">
+
+    <!-- ══════════ HOME ══════════ -->
+    <div class="page active" id="pg-home">
+      <div class="navbar">
+        <div class="nav-title" data-cn="Wahda 活动" data-en="Wahda Events">Wahda Events</div>
+        <button class="icon-btn" onclick="go('pg-my')" aria-label="My">🎟️</button>
+      </div>
+      <div class="scroll">
+        <div class="locbar" onclick="openLocSheet()">
+          <div class="lb-ic">📍</div>
+          <div class="lb-main">
+            <div class="lb-t" id="locCity">Dubai</div>
+            <div class="lb-s" id="locSub">Showing events near you</div>
+          </div>
+          <div class="lb-act" id="locAct">Change</div>
+        </div>
+
+        <div class="search">
+          <span>🔍</span>
+          <input type="text" id="searchInput" placeholder="Search events, venues, hosts..."
+                 data-cn-ph="搜索活动、场地、主办方..." data-en-ph="Search events, venues, hosts..."
+                 oninput="onSearch(this.value)">
+        </div>
+
+        <div class="seg">
+          <button class="on" id="segForYou" onclick="setTab('forYou')" data-cn="为你推荐" data-en="For You">For You</button>
+          <button id="segNear" onclick="setTab('nearby')" data-cn="附近" data-en="Near By">Near By</button>
+        </div>
+
+        <div class="sec-h">
+          <h3 data-cn="精选" data-en="Featured">Featured</h3>
+          <span class="more" id="featCount"></span>
+        </div>
+        <div class="rail" id="featuredRail"></div>
+
+        <div class="sec-h"><h3 data-cn="分类" data-en="Categories">Categories</h3></div>
+        <div class="rail" id="catRail"></div>
+
+        <div id="eventList"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ MY EVENTS ══════════ -->
+    <div class="page" id="pg-my">
+      <div class="navbar">
+        <div class="nav-title" data-cn="我的活动" data-en="My Events">My Events</div>
+        <button class="icon-btn" onclick="go('pg-home')" aria-label="Home">🏠</button>
+      </div>
+      <div class="tkentry" onclick="go('pg-tickets')">
+        <div class="tke-ic">🎟️</div>
+        <div class="tke-main">
+          <b data-cn="我的票券" data-en="My Tickets">My Tickets</b>
+          <span id="tkeSub"></span>
+        </div>
+        <span class="tke-count" id="tkeCount"></span>
+        <span class="tke-arrow">›</span>
+      </div>
+      <div class="mtabs" id="myTabs"></div>
+      <div class="scroll">
+        <div id="myList"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ DETAIL ══════════ -->
+    <div class="page" id="pg-detail">
+      <div class="dhero" id="dhero">
+        <img class="dh-img" id="dheroImg" src="" alt="">
+        <div class="dh-scr"></div>
+        <div class="dh-top">
+          <button class="dh-round" onclick="goBack()">‹</button>
+          <div class="dh-top-r">
+            <button class="dh-round" onclick="shareEvent()">↗</button>
+            <button class="dh-round" id="favBtn" onclick="toggleFav()">♡</button>
+          </div>
+        </div>
+        <div class="dh-cat" id="dheroCat"></div>
+      </div>
+      <div class="scroll">
+        <div class="dbody" id="dbody"></div>
+      </div>
+      <div class="cta" id="dcta"></div>
+    </div>
+
+    <!-- ══════════ CREATE ══════════ -->
+    <div class="page" id="pg-create">
+      <div class="navbar">
+        <button class="back-btn" onclick="goBack()">‹</button>
+        <div class="nav-title" data-cn="创建活动" data-en="Create Event">Create Event</div>
+      </div>
+      <div class="scroll">
+        <div class="form" id="createForm"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ CHECKOUT ══════════ -->
+    <div class="page" id="pg-checkout">
+      <div class="navbar">
+        <button class="back-btn" onclick="goBack()">‹</button>
+        <div class="nav-title" data-cn="购买门票" data-en="Buy Tickets">Buy Tickets</div>
+      </div>
+      <div class="scroll">
+        <div class="form" id="checkoutForm"></div>
+      </div>
+      <div class="cta" id="coTotal"></div>
+    </div>
+
+    <!-- ══════════ MANAGE ══════════ -->
+    <div class="page" id="pg-manage">
+      <div class="navbar">
+        <button class="back-btn" onclick="goBack()">‹</button>
+        <div class="nav-title" data-cn="管理活动" data-en="Manage Event">Manage Event</div>
+      </div>
+      <div class="scroll">
+        <div class="form" id="manageForm"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ ORDER（确认订单 · 30 分钟有效期）══════════ -->
+    <div class="page" id="pg-order">
+      <div class="navbar">
+        <button class="back-btn" onclick="goBack()">‹</button>
+        <div class="nav-title" data-cn="确认订单" data-en="Order">Order</div>
+      </div>
+      <div class="scroll">
+        <div class="form" id="orderForm"></div>
+      </div>
+      <div class="cta" id="orderCta"></div>
+    </div>
+
+    <!-- ══════════ TICKET（二维码电子票）══════════ -->
+    <div class="page" id="pg-ticket">
+      <div class="navbar">
+        <button class="back-btn" onclick="goBack()">‹</button>
+        <div class="nav-title" data-cn="电子票" data-en="E-Ticket">E-Ticket</div>
+      </div>
+      <div class="scroll">
+        <div id="ticketBody"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ TICKETS（我的票券 · 独立页）══════════ -->
+    <div class="page" id="pg-tickets">
+      <div class="navbar">
+        <button class="back-btn" onclick="goBack()">‹</button>
+        <div class="nav-title" data-cn="我的票券" data-en="My Tickets">My Tickets</div>
+      </div>
+      <div class="mtabs" id="tkTabs"></div>
+      <div class="scroll">
+        <div id="tkList"></div>
+      </div>
+    </div>
+
+  </div><!-- /screen-wrap -->
+
+  <div class="tabbar" id="tabbar">
+    <button class="tab active" data-pg="pg-home" onclick="go('pg-home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+      <span data-cn="首页" data-en="Home">Home</span>
+    </button>
+    <button class="tab" data-pg="pg-my" onclick="go('pg-my')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5z"/><path d="M12 8v2M12 14v2"/></svg>
+      <span data-cn="我的活动" data-en="My Events">My Events</span>
+    </button>
+  </div>
+
+  <!-- 浮动创建按钮 -->
+  <div class="fab" id="fab" onclick="go('pg-create')" role="button" aria-label="Create Event">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>
+  </div>
+
+  <div class="mask" id="mask" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet"></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script id="qrlib">/**
+ * Minified by jsDelivr using Terser v5.37.0.
+ * Original file: /npm/qrcode-generator@1.4.4/qrcode.js
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,(function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1}))},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}((function(){return qrcode}));
+//# sourceMappingURL=/sm/26b4b0d0b1e283d6b3ec9857ac597d7a60c76ac17be1ef4c965f03086de426bb.map</script>
+<script>
+/* ══════════════════════════════════════════════
+   Wahda Events — 数据层（localStorage）
+══════════════════════════════════════════════ */
+var SK='wahda_ev_web_v4', MK='wahda_ev_meta_v2', LK='wahda_ev_lang_v1';
+/* 内存兜底：预览面板/沙箱 iframe 里 localStorage 可能被禁用，
+   写入失败也必须保证 session 内有数据，否则首页会空。 */
+var MEM={};
+function lsG(k,d){
+  if(Object.prototype.hasOwnProperty.call(MEM,k))return MEM[k];
+  try{var v=localStorage.getItem(k);if(v!==null&&v!==''){MEM[k]=JSON.parse(v);return MEM[k]}}catch(e){}
+  return d;
+}
+function lsS(k,v){
+  MEM[k]=v;
+  try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}
+  return true;
+}
+function gid(){return 'evt_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function defTiers(){return [{id:'t1',name:'General Admission',price:100,stock:200}]}
+function normT(t){return (t||[]).map(function(x){return{id:x.id||gid(),name:x.name||'',price:Math.max(0,parseInt(x.price)||0),stock:Math.max(0,parseInt(x.stock)||0)}})}
+function sumT(t){var n=normT(t),s=0,p=1e9;n.forEach(function(x){s+=x.stock;if(x.price<p)p=x.price});
+  return{totalStock:s,minPrice:p===1e9?0:p,tierCount:n.length}}
+
+var CATS=[
+  {id:'quran',en:'Quran',zh:'古兰经',em:'📖'},
+  {id:'tafsir',en:'Tafsir',zh:'经注',em:'📚'},
+  {id:'hadith',en:'Hadith',zh:'圣训',em:'📜'},
+  {id:'fiqh',en:'Fiqh',zh:'教法',em:'⚖️'},
+  {id:'aqeedah',en:'Aqeedah',zh:'信仰',em:'🕌'},
+  {id:'halaqah',en:'Halaqah',zh:'学习圈',em:'🤲'},
+  {id:'studycircle',en:'Study Circle',zh:'学习小组',em:'👥'},
+  {id:'arabic',en:'Arabic Studies',zh:'阿拉伯语',em:'✍️'},
+  {id:'others',en:'Others',zh:'其他',em:'🎨'}
+];
+/* ── 真实封面图（模型生成于 assets/covers/）───────────────── */
+var IMGB='assets/covers/';
+var CATCOV={quran:'culture-mosque',tafsir:'learning-seminar',hadith:'culture-calligraphy',
+  fiqh:'business-meetup',aqeedah:'culture-mosque',halaqah:'community-iftar',
+  studycircle:'learning-seminar',arabic:'culture-calligraphy',others:'music-night'};
+var COVERS={
+  quran:['culture-mosque','learning-seminar'],
+  tafsir:['learning-seminar'],
+  hadith:['culture-calligraphy'],
+  fiqh:['business-meetup'],
+  aqeedah:['culture-mosque'],
+  halaqah:['community-iftar'],
+  studycircle:['learning-seminar','family-kids'],
+  arabic:['culture-calligraphy','culture-fashion'],
+  others:['music-night','music-sufi','food-festival','food-street','sport-run','sport-beach',
+    'sport-yoga','community-iftar','business-meetup','family-kids']
+};
+/* 指定活动 → 专属封面（其余按分类哈希分配，保证同分类不重复） */
+var COV_BY_ID={s1:'music-night',s13:'music-sufi',s2:'food-festival',s12:'food-street',s17:'food-street',
+  s4:'sport-run',s9:'sport-beach',s18:'sport-yoga',s6:'business-meetup',s10:'business-meetup',
+  s11:'culture-calligraphy',s8:'culture-calligraphy',s16:'culture-mosque',s14:'culture-fashion',
+  s5:'community-iftar',s7:'family-kids',s3:'learning-seminar',s15:'learning-seminar',
+  s27:'sport-run',s28:'food-street',s29:'community-iftar',s30:'business-meetup',
+  s31:'culture-calligraphy',s32:'sport-yoga'};
+function coverOf(e){
+  if(!e)return IMGB+'community-iftar.jpg';
+  if(COV_BY_ID[e.id])return IMGB+COV_BY_ID[e.id]+'.jpg';
+  if(e.img)return IMGB+e.img+'.jpg';
+  var arr=COVERS[e.cat]||COVERS.community,h=0,i;
+  for(i=0;i<(e.id||'').length;i++)h+=(e.id.charCodeAt(i)*(i+3));
+  return IMGB+arr[h%arr.length]+'.jpg';
+}
+function catCover(id){return IMGB+(CATCOV[id]||'community-iftar')+'.jpg'}
+var COUNTRIES=[
+  {id:'au',en:'Australia',zh:'澳大利亚',fl:'🇦🇺'},
+  {id:'uae',en:'United Arab Emirates',zh:'阿联酋',fl:'🇦🇪'},
+  {id:'sa',en:'Saudi Arabia',zh:'沙特阿拉伯',fl:'🇸🇦'},
+  {id:'uk',en:'United Kingdom',zh:'英国',fl:'🇬🇧'},
+  {id:'my',en:'Malaysia',zh:'马来西亚',fl:'🇲🇾'},
+  {id:'id',en:'Indonesia',zh:'印度尼西亚',fl:'🇮🇩'},
+  {id:'tr',en:'Türkiye',zh:'土耳其',fl:'🇹🇷'},
+  {id:'eg',en:'Egypt',zh:'埃及',fl:'🇪🇬'},
+  {id:'pk',en:'Pakistan',zh:'巴基斯坦',fl:'🇵🇰'}
+];
+var CITIES=[
+  {id:'sydney',c:'au',en:'Sydney',zh:'悉尼'},
+  {id:'melbourne',c:'au',en:'Melbourne',zh:'墨尔本'},
+  {id:'dubai',c:'uae',en:'Dubai',zh:'迪拜'},
+  {id:'abudhabi',c:'uae',en:'Abu Dhabi',zh:'阿布扎比'},
+  {id:'riyadh',c:'sa',en:'Riyadh',zh:'利雅得'},
+  {id:'jeddah',c:'sa',en:'Jeddah',zh:'吉达'},
+  {id:'london',c:'uk',en:'London',zh:'伦敦'},
+  {id:'manchester',c:'uk',en:'Manchester',zh:'曼彻斯特'},
+  {id:'kl',c:'my',en:'Kuala Lumpur',zh:'吉隆坡'},
+  {id:'jakarta',c:'id',en:'Jakarta',zh:'雅加达'},
+  {id:'istanbul',c:'tr',en:'Istanbul',zh:'伊斯坦布尔'},
+  {id:'cairo',c:'eg',en:'Cairo',zh:'开罗'},
+  {id:'karachi',c:'pk',en:'Karachi',zh:'卡拉奇'}
+];
+/* 货币：按国家给出本地符号，价格展示更真实 */
+var CURR={au:'A$ ',uae:'AED ',sa:'SAR ',uk:'£',my:'RM ',id:'Rp ',tr:'₺',eg:'E£ ',pk:'Rs ',global:'$ '};
+function curOf(e){
+  if(e.cur)return e.cur;
+  return CURR[e.ctry]||CURR[(CITIES.filter(function(x){return x.id===e.city})[0]||{}).c]||CURR.global;
+}
+function kfmt(n){return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,'')+'k':String(n)}
+
+/* 精选（Featured）—— 平台主推的大中型活动 */
+var SEED=[
+{id:'s1',name:'Nasheed Night Under the Stars',desc:'An evening of soulful nasheed and live percussion under the open sky, headlined by three vocalists from across the Gulf. Family friendly, with a halal food court, prayer area and free parking on site.',type:'offline',loc:'Emirates Park Amphitheatre, Dubai',start:'2026-11-08 19:30',dh:2,dm:30,cap:800,paid:true,tiers:[{id:'t1',name:'General Admission',price:120,stock:500},{id:'t2',name:'VIP Front Row',price:300,stock:100}],cat:'others',ctry:'uae',city:'dubai',org:'Noor Collective',av:'🎤',feat:true,going:612},
+{id:'s2',name:'Halal Food Festival 2026',desc:'Over 60 halal vendors, 12 live cooking demos and a dedicated family zone with kids activities. Taste the world in one afternoon — from Rendang to Shawarma.',type:'offline',loc:'Riverside Market, Kuala Lumpur',start:'2026-11-15 11:00',dh:6,dm:0,cap:0,paid:true,tiers:[{id:'t1',name:'Day Pass',price:45,stock:2000},{id:'t2',name:'Family Bundle (4 pax)',price:150,stock:300}],cat:'others',ctry:'my',city:'kl',org:'KL Halal Week',av:'🍢',feat:true,going:2410},
+{id:'s4',name:'Community Charity Run 5K',desc:'Run for a cause. All proceeds fund clean water projects in three villages. Open to all ages, with a separate 1K kids dash and a post-run breakfast.',type:'offline',loc:'City Marina Loop, Jakarta',start:'2026-11-29 06:30',dh:3,dm:0,cap:1500,paid:true,tiers:[{id:'t1',name:'Adult Entry',price:60,stock:900},{id:'t2',name:'Kids Dash',price:25,stock:600}],cat:'others',ctry:'id',city:'jakarta',org:'Ummah Runners',av:'🏃',feat:true,going:1148},
+{id:'s6',name:'Muslim Founders Meetup',desc:'Connect with 200+ fellow Muslim entrepreneurs across three continents. Hear unfiltered founder stories, join breakout rooms by industry, and find your next co-founder or investor.',type:'online',loc:'',start:'2026-12-03 19:00',dh:2,dm:0,cap:200,paid:true,tiers:[{id:'t1',name:'Attendee',price:80,stock:180},{id:'t2',name:'Premium + Mentor Hour',price:220,stock:20}],cat:'others',ctry:'',city:'global',org:'Wahda Ventures',av:'💼',feat:true,going:186},
+{id:'s12',name:'Weekend Halal Brunch Club',desc:'A curated tasting walk across three of Downtown\'s top halal restaurants, with specialty coffee, live acoustic sets and good conversation along the way.',type:'offline',loc:'Downtown Dubai',start:'2026-11-21 10:30',dh:3,dm:0,cap:60,paid:true,tiers:[{id:'t1',name:'Brunch Pass',price:180,stock:60}],cat:'others',ctry:'uae',city:'dubai',org:'Halal Foodies Dubai',av:'🥘',feat:true,going:52},
+{id:'s13',name:'Istanbul Sufi Music Festival',desc:'Three nights of Sufi devotional music performed by ensembles from Türkiye, Egypt and Bosnia, inside a 500-year-old Ottoman hall. Doors open one hour before each set.',type:'offline',loc:'Fatih Cultural Hall, Istanbul',start:'2026-12-12 20:00',dh:2,dm:30,cap:900,paid:true,tiers:[{id:'t1',name:'Standard Seat',price:450,stock:700},{id:'t2',name:'Front Section',price:900,stock:200}],cat:'others',ctry:'tr',city:'istanbul',org:'Fatih Music Society',av:'🪕',feat:true,going:744},
+{id:'s14',name:'Riyadh Modest Fashion Showcase',desc:'A runway showcasing 14 modest-wear designers from Saudi and beyond, followed by a pop-up souk where you can shop the collection directly.',type:'offline',loc:'Boulevard Riyadh City, Riyadh',start:'2026-11-25 18:00',dh:3,dm:0,cap:600,paid:true,tiers:[{id:'t1',name:'Seated Ticket',price:120,stock:450},{id:'t2',name:'Front Row + Gift Bag',price:350,stock:80}],cat:'others',ctry:'sa',city:'riyadh',org:'Modest Majlis',av:'👗',feat:true,going:398},
+
+/* For You —— 平台推荐的中长尾活动 */
+{id:'s9',name:'Sunset Beach Volleyball Meetup',desc:'Casual friendly volleyball at Jumeirah Beach. All skill levels welcome, nets set up from 5pm. Bring your own water and a good mood.',type:'offline',loc:'Jumeirah Beach, Dubai',start:'2026-11-07 17:00',dh:2,dm:0,cap:40,paid:false,tiers:defTiers(),cat:'others',ctry:'uae',city:'dubai',org:'Dubai Beach Club',av:'🏐',feat:false,going:31},
+{id:'s10',name:'Halal Startup Pitch Night',desc:'Watch six early-stage halal-focused startups pitch to a panel of investors and community leaders, then vote for the People\'s Choice over dinner.',type:'offline',loc:'Dubai Silicon Oasis, Dubai',start:'2026-11-18 19:00',dh:2,dm:30,cap:150,paid:true,tiers:[{id:'t1',name:'Attendee',price:50,stock:140},{id:'t2',name:'Investor Pass',price:200,stock:10}],cat:'others',ctry:'uae',city:'dubai',org:'Wahda Ventures',av:'🚀',feat:false,going:96},
+{id:'s11',name:'Arabic Calligraphy Workshop',desc:'Learn the fundamentals of Arabic calligraphy with a master calligrapher. All materials provided — reed pens, ink and practice paper are yours to keep.',type:'offline',loc:'Alserkal Avenue, Dubai',start:'2026-11-14 15:00',dh:3,dm:0,cap:25,paid:true,tiers:[{id:'t1',name:'Participant',price:150,stock:25}],cat:'arabic',ctry:'uae',city:'dubai',org:'Art of the Pen',av:'🖋️',feat:false,going:23},
+{id:'s8',name:'Islamic Calligraphy Exhibition',desc:'A curated exhibition of contemporary Islamic calligraphy from 22 artists across the region, with live demonstrations every afternoon.',type:'offline',loc:'National Art Gallery, Istanbul',start:'2026-12-10 10:00',dh:8,dm:0,cap:1000,paid:true,tiers:[{id:'t1',name:'Entry',price:50,stock:900}],cat:'arabic',ctry:'tr',city:'istanbul',org:'Heritage Arts Society',av:'🖼️',feat:false,going:521},
+{id:'s5',name:'Friday Community Iftar Gathering',desc:'Weekly community iftar with inspiring short talks, communal prayer and a shared meal prepared by volunteers. Everyone is welcome — no booking needed for children.',type:'offline',loc:'Al Noor Community Centre, London',start:'2026-11-06 17:00',dh:3,dm:0,cap:300,paid:false,tiers:defTiers(),cat:'halaqah',ctry:'uk',city:'london',org:'Al Noor Centre',av:'🤲',feat:false,going:212},
+{id:'s7',name:'Eid Crafts & Storytelling Workshop',desc:'A hands-on morning of Eid lantern making, storytelling and treats for the little ones. Best for ages 4–10, one accompanying adult per child.',type:'offline',loc:'Green Valley Library, Manchester',start:'2026-11-22 10:00',dh:2,dm:0,cap:120,paid:true,tiers:[{id:'t1',name:'Child Ticket',price:12,stock:100},{id:'t2',name:'Adult Companion',price:8,stock:100}],cat:'others',ctry:'uk',city:'manchester',org:'Little Crescent',av:'🎨',feat:false,going:74},
+{id:'s3',name:'Islamic Finance for Beginners',desc:'A practical workshop on halal investing, zakat planning and sharia-compliant banking, led by certified advisors. Recording included for all registered attendees.',type:'online',loc:'',start:'2026-11-20 20:00',dh:1,dm:30,cap:500,paid:false,tiers:defTiers(),cat:'fiqh',ctry:'',city:'global',org:'Barakah Academy',av:'📚',feat:false,going:389},
+{id:'s15',name:'Tajwid Intensive Weekend',desc:'Two full days with a certified Qari correcting your recitation line by line, covering makharij, madd rules and waqf. Small groups of six for individual feedback.',type:'offline',loc:'East London Mosque Annex, London',start:'2026-11-28 09:30',dh:6,dm:0,cap:60,paid:true,tiers:[{id:'t1',name:'Standard',price:65,stock:52},{id:'t2',name:'Concession',price:35,stock:8}],cat:'quran',ctry:'uk',city:'london',org:'Quran Institute UK',av:'📖',feat:false,going:47},
+{id:'s16',name:'Dome & Minaret Architecture Tour',desc:'A guided walking tour of Cairo\'s Islamic skyline — visiting six historic mosques and explaining how Mamluk and Ottoman builders shaped the city.',type:'offline',loc:'Islamic Cairo Gate, Cairo',start:'2026-11-19 08:30',dh:4,dm:30,cap:30,paid:true,tiers:[{id:'t1',name:'Walker',price:220,stock:30}],cat:'others',ctry:'eg',city:'cairo',org:'Cairo Heritage Walks',av:'🕌',feat:false,going:26},
+{id:'s17',name:'Karachi Street Food Walk',desc:'A three-hour tasting trail through Burns Road and its side lanes: seven stops, including nihari at dawn and the city\'s best chai. Come hungry.',type:'offline',loc:'Burns Road, Karachi',start:'2026-11-30 07:00',dh:3,dm:0,cap:24,paid:true,tiers:[{id:'t1',name:'Tasting Pass',price:1800,stock:24}],cat:'others',ctry:'pk',city:'karachi',org:'Karak Chai Tours',av:'🍛',feat:false,going:19},
+{id:'s18',name:'Sunrise Sisters Yoga Session',desc:'A gentle sunrise flow for sisters only, on the corniche lawn. Bring your own mat; water and post-class dates provided. All levels, beginners very welcome.',type:'offline',loc:'Corniche Park Lawn, Abu Dhabi',start:'2026-11-09 06:00',dh:1,dm:30,cap:45,paid:false,tiers:defTiers(),cat:'others',ctry:'uae',city:'abudhabi',org:'Wellness Ummah',av:'🧘',feat:false,going:38},
+{id:'s19',name:'Prophetic Medicine & Wellness Talk',desc:'A qualified GP explores the Prophetic tradition of nutrition, cupping and rest — separating well-evidenced practice from myth, with Q&A.',type:'offline',loc:'Salisbury Community Hall, Manchester',start:'2026-12-05 18:30',dh:2,dm:0,cap:160,paid:true,tiers:[{id:'t1',name:'Entry',price:10,stock:160}],cat:'hadith',ctry:'uk',city:'manchester',org:'Tibb Institute',av:'🌿',feat:false,going:88},
+{id:'s20',name:'Muslim Youth Leadership Summit',desc:'A one-day summit for 16–25 year olds: workshops on public speaking, financial literacy and identity, plus a panel of young founders doing the work.',type:'offline',loc:'KL Convention Annex, Kuala Lumpur',start:'2026-12-06 09:00',dh:7,dm:0,cap:400,paid:true,tiers:[{id:'t1',name:'Delegate',price:75,stock:340},{id:'t2',name:'Group of 5',price:300,stock:60}],cat:'studycircle',ctry:'my',city:'kl',org:'Youth of Ummah',av:'🎓',feat:false,going:283},
+{id:'s21',name:'Halal Investors Networking Breakfast',desc:'Coffee, croissants and candid conversation for Muslim investors and founders. Structured rotations so you meet twelve people, not four.',type:'offline',loc:'Regent\'s Park Offices, London',start:'2026-11-27 08:00',dh:2,dm:0,cap:80,paid:true,tiers:[{id:'t1',name:'Seat',price:25,stock:80}],cat:'others',ctry:'uk',city:'london',org:'Halal Angels Network',av:'☕',feat:false,going:61},
+{id:'s22',name:'Zakat & Purification Clinic',desc:'Bring your questions and your calculator. A scholar and an accountant walk through real zakat calculations, gold, crypto and rental income.',type:'online',loc:'',start:'2026-12-01 21:00',dh:1,dm:0,cap:300,paid:false,tiers:defTiers(),cat:'fiqh',ctry:'',city:'global',org:'Zakat Hub',av:'🧮',feat:false,going:174},
+{id:'s23',name:'Sisters Cycling Club — First Ride',desc:'A slow, no-drop 12km loop along the canal for sisters who want to start cycling. Basic bike handling covered before we roll. Bikes available to borrow.',type:'offline',loc:'Kota Tua Square, Jakarta',start:'2026-11-16 06:30',dh:2,dm:0,cap:30,paid:false,tiers:defTiers(),cat:'others',ctry:'id',city:'jakarta',org:'Hijabi Cyclists ID',av:'🚲',feat:false,going:24},
+{id:'s24',name:'Levantine Cooking Class & Dinner',desc:'Hands-on cooking of a four-course Levantine menu — making manakeesh, muhammara and knafeh from scratch — then we eat everything we made.',type:'offline',loc:'Al Quoz Cooking Studio, Dubai',start:'2026-11-23 18:00',dh:3,dm:0,cap:20,paid:true,tiers:[{id:'t1',name:'Class + Dinner',price:220,stock:20}],cat:'others',ctry:'uae',city:'dubai',org:'Sham Kitchen',av:'🧆',feat:false,going:18},
+{id:'s25',name:'Kids Quran Memorisation Camp',desc:'A five-day morning camp for ages 7–12 combining memorisation games, tajwid basics, sports and crafts. Run by qualified teachers with full safeguarding.',type:'offline',loc:'Al Narjis Community Institute, Riyadh',start:'2026-12-14 09:00',dh:4,dm:0,cap:80,paid:true,tiers:[{id:'t1',name:'Week Pass',price:390,stock:80}],cat:'quran',ctry:'sa',city:'riyadh',org:'Hifz Academy',av:'🕌',feat:false,going:57},
+{id:'s26',name:'Evening Dhikr & Reflection Circle',desc:'A quiet hour of remembrance, short reflections and open du\'a to close the week. Tea served after. No cost, no registration pressure — just come.',type:'offline',loc:'Sheikh Zayed Grand Mosque Annex, Abu Dhabi',start:'2026-11-13 19:30',dh:1,dm:0,cap:120,paid:false,tiers:defTiers(),cat:'halaqah',ctry:'uae',city:'abudhabi',org:'Sakinah Circle',av:'📿',feat:false,going:83},
+
+/* ── 澳大利亚（默认位置）── */
+{id:'s28',name:'Lakemba Ramadan Night Market',desc:'A month-long night market along Haldon Street — 60+ food stalls, community stalls and family entertainment every evening from Maghrib. The biggest halal food street in the southern hemisphere.',type:'offline',loc:'Haldon Street, Lakemba, Sydney',start:'2026-11-13 18:00',dh:5,dm:0,cap:0,paid:true,tiers:[{id:'t1',name:'Free Entry',price:0,stock:5000},{id:'t2',name:'Food Voucher Pack',price:25,stock:800}],cat:'others',ctry:'au',city:'sydney',org:'Lakemba Collective',av:'🍢',feat:true,going:1240},
+{id:'s27',name:'Sunrise Harbour Bridge Run',desc:'A social 5km loop from Circular Quay across the Harbour Bridge at sunrise, ending with coffee and dates at a harbourside café. All paces welcome.',type:'offline',loc:'Circular Quay, Sydney',start:'2026-11-11 06:15',dh:1,dm:30,cap:60,paid:false,tiers:defTiers(),cat:'others',ctry:'au',city:'sydney',org:'Sydney Ummah Runners',av:'🏃',feat:false,going:47},
+{id:'s29',name:'Auburn Community Iftar Dinner',desc:'A monthly community dinner hosted by volunteers — shared meal, a short reminder and good company. Families, students and newcomers especially welcome.',type:'offline',loc:'Auburn Community Centre, Sydney',start:'2026-11-06 18:30',dh:2,dm:0,cap:250,paid:false,tiers:defTiers(),cat:'halaqah',ctry:'au',city:'sydney',org:'Auburn Ummah',av:'🤲',feat:false,going:118},
+{id:'s30',name:'Muslim Founders Sydney Meetup',desc:'Quarterly meetup for Muslim founders, operators and students in tech — lightning talks, matched networking and halal dinner provided.',type:'offline',loc:'Haymarket Innovation Hub, Sydney',start:'2026-11-24 18:30',dh:2,dm:30,cap:120,paid:true,tiers:[{id:'t1',name:'General',price:20,stock:100},{id:'t2',name:'Student',price:10,stock:20}],cat:'others',ctry:'au',city:'sydney',org:'Wahda Ventures AU',av:'💼',feat:false,going:73},
+{id:'s31',name:'Ottoman Calligraphy Workshop',desc:'A beginner-friendly workshop on the Ottoman thuluth style, taught by a visiting master from Istanbul. All materials provided, small group of 16.',type:'offline',loc:'Coburg Arts Space, Melbourne',start:'2026-12-05 14:00',dh:3,dm:0,cap:16,paid:true,tiers:[{id:'t1',name:'Participant',price:95,stock:16}],cat:'arabic',ctry:'au',city:'melbourne',org:'Ilm Studio',av:'🖋️',feat:false,going:22},
+{id:'s32',name:'Bondi Sisters Sunrise Yoga',desc:'A gentle sisters-only sunrise flow on the grass at Bondi Beach. Bring your own mat — water and dates provided after class.',type:'offline',loc:'Bondi Beach North, Sydney',start:'2026-11-10 05:45',dh:1,dm:15,cap:40,paid:false,tiers:defTiers(),cat:'others',ctry:'au',city:'sydney',org:'Sakina Wellness',av:'🧘',feat:false,going:34}
+];
+
+var store={
+  /* 结构自愈：空 / 非数组 / 缺少新字段（旧 schema）时一律用种子数据重建 */
+  list:function(){
+    var a=lsG(SK,null);
+    var ok=Array.isArray(a)&&a.length>0&&a[0]&&typeof a[0].going!=='undefined'&&typeof a[0].feat!=='undefined';
+    if(!ok){lsS(SK,SEED.slice());return lsG(SK,SEED.slice())}
+    return a;
+  },
+  get:function(id){return store.list().filter(function(x){return x.id===id})[0]||null},
+  create:function(p){var a=store.list(),r={id:gid(),name:p.name,desc:p.desc||'',type:p.type||'offline',loc:p.loc||'',
+    start:p.start||'',dh:p.dh||2,dm:p.dm||0,cap:p.cap||0,paid:!!p.paid,tiers:normT(p.tiers),
+    cat:p.cat||'others',ctry:p.ctry||'uae',city:p.city||'dubai',org:p.org||'Ahmad Rahman',av:p.av||'🎪',
+    feat:false,going:0,cap:p.cap||0,vis:p.vis||'public',dis:p.dis||'',acc:p.acc||'',img:p.img||''};
+    a.unshift(r);lsS(SK,a);return r},
+  update:function(id,pt){var a=store.list();for(var i=0;i<a.length;i++){if(a[i].id===id){a[i]=Object.assign({},a[i],pt);lsS(SK,a);return a[i]}}return null},
+  remove:function(id){lsS(SK,store.list().filter(function(x){return x.id!==id}))}
+};
+function meta(){var m=lsG(MK,null);if(!m||!m.fav){m={fav:[],his:[],book:[],att:[],paid:[]};lsS(MK,m)}return m}
+function setMeta(m){lsS(MK,m)}
+var ustore={
+  isFav:function(id){return meta().fav.indexOf(id)>=0},
+  togFav:function(id){var m=meta(),i=m.fav.indexOf(id),a=false;if(i>=0)m.fav.splice(i,1);else{m.fav.push(id);a=true}setMeta(m);return a},
+  fav:function(){return meta().fav},
+  view:function(id){var m=meta();m.his=m.his.filter(function(h){return h!==id});m.his.unshift(id);m.his=m.his.slice(0,50);setMeta(m)},
+  his:function(){return meta().his},
+  book:function(id){var m=meta();if(m.book.indexOf(id)<0){m.book.push(id);setMeta(m)}},
+  booked:function(){return meta().book},
+  att:function(id){var m=meta();if(m.att.indexOf(id)<0){m.att.push(id);setMeta(m)}},
+  attended:function(){return meta().att},
+  markPaid:function(id){var m=meta();if(m.paid.indexOf(id)<0){m.paid.push(id);setMeta(m)}},
+  paid:function(){return meta().paid}
+};
+
+/* ── 订单层：创建 → 30 分钟内支付 → 电子票 ────────────── */
+var OK='wahda_ev_orders_v1',ORDER_TTL=30*60*1000;
+function rTicket(){var s='WD-',C='ABCDEFGHJKMNPQRSTUVWXYZ23456789',i;
+  for(i=0;i<8;i++)s+=C[Math.floor(Math.random()*C.length)];return s}
+function rOrderNo(){return 'WHD'+Date.now().toString().slice(-8)+Math.floor(Math.random()*90+10)}
+var OSTORE={
+  list:function(){var a=lsG(OK,[]);if(!Array.isArray(a))return [];return a},
+  get:function(id){return OSTORE.list().filter(function(o){return o.id===id})[0]||null},
+  save:function(o){var a=OSTORE.list();for(var i=0;i<a.length;i++){if(a[i].id===o.id){a[i]=o;break}}
+    lsS(OK,a)},
+  create:function(evId,sel,dis,amt){var ts=Date.now();
+    var o={id:rOrderNo(),ev:evId,sel:sel,dis:dis,amt:amt,status:'pending',
+      created:ts,expires:ts+ORDER_TTL,paidAt:0,usedAt:0,ticket:'',paym:PAYM||'token'};
+    var a=OSTORE.list();a.unshift(o);lsS(OK,a);return o},
+  pay:function(id){var o=OSTORE.get(id);if(!o||o.status!=='pending')return null;
+    o.status='paid';o.paidAt=Date.now();o.paym=PAYM||'token';
+    if(!o.ticket)o.ticket=rTicket();OSTORE.save(o);return o},
+  expire:function(id){var o=OSTORE.get(id);if(!o||o.status!=='pending')return null;
+    o.status='expired';OSTORE.save(o);return o},
+  use:function(id){var o=OSTORE.get(id);if(!o||o.status!=='paid')return null;
+    o.status='used';o.usedAt=Date.now();OSTORE.save(o);return o},
+  refund:function(id){var o=OSTORE.get(id);if(!o||o.status!=='paid')return null;
+    o.status='refunded';o.refundedAt=Date.now();OSTORE.save(o);return o},
+  /* 启动 / 每秒清扫：超时未支付的订单自动失效 */
+  sweep:function(){var a=OSTORE.list(),ch=false;
+    a.forEach(function(o){if(o.status==='pending'&&Date.now()>=o.expires){o.status='expired';ch=true}});
+    if(ch)lsS(OK,a);return ch}
+};
+
+/* ══════════════════════════════════════════════
+   i18n
+══════════════════════════════════════════════ */
+var LANG=lsG(LK,'en');
+function T(cn,en){return LANG==='cn'?cn:en}
+function applyLang(){
+  document.querySelectorAll('[data-cn][data-en]').forEach(function(el){
+    el.textContent=(LANG==='cn')?el.getAttribute('data-cn'):el.getAttribute('data-en');
+  });
+  document.querySelectorAll('[data-cn-ph][data-en-ph]').forEach(function(el){
+    el.placeholder=(LANG==='cn')?el.getAttribute('data-cn-ph'):el.getAttribute('data-en-ph');
+  });
+  document.getElementById('langBtn').textContent=(LANG==='cn')?'English':'中文';
+}
+function toggleLang(){LANG=(LANG==='cn'?'en':'cn');lsS(LK,LANG);applyLang();renderAll()}
+
+/* 工具 */
+function catOf(id){var c=CATS.filter(function(x){return x.id===id})[0];return c?(LANG==='cn'?c.zh:c.en):id}
+function catEm(id){var c=CATS.filter(function(x){return x.id===id})[0];return c?c.em:'🎪'}
+function cityOf(id){var c=CITIES.filter(function(x){return x.id===id})[0];return c?(LANG==='cn'?c.zh:c.en):id}
+function ctryOf(id){var c=COUNTRIES.filter(function(x){return x.id===id})[0];return c?(LANG==='cn'?c.zh:c.en):''}
+function ctryFl(id){var c=COUNTRIES.filter(function(x){return x.id===id})[0];return c?c.fl:'🌍'}
+function gClass(id){return 'g-'+(id||'others')}
+function fDate(s){if(!s)return'';var p=s.split(' ')[0].split('-');
+  if(LANG==='cn')return parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日';
+  var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return M[parseInt(p[1],10)-1]+' '+parseInt(p[2],10)}
+function fTime(s){var t=(s||'').split(' ')[1];if(!t)return'';var p=t.split(':'),h=parseInt(p[0],10);
+  if(LANG==='cn')return h+':'+p[1];var ap=h>=12?'PM':'AM',h2=h%12===0?12:h%12;return h2+':'+p[1]+' '+ap}
+function priceFree(e){return !e.paid||sumT(e.tiers).minPrice===0}
+function priceOf(e){if(priceFree(e))return T('免费','Free');return T('起 ','From ')+curOf(e)+sumT(e.tiers).minPrice}
+function moneyOf(e,n){return curOf(e)+n}
+function goingOf(e){return e.going||0}
+function leftOf(e){var s=sumT(e.tiers).totalStock;return s?(s-(e.going||0)):0}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function reasonOf(e){
+  if(e.feat)return{t:T('精选','Featured'),c:''};
+  if(e.city===ST.city&&e.type==='offline')return{t:T('附近','Near you'),c:'near'};
+  if(priceFree(e))return{t:T('免费','Free entry'),c:''};
+  return{t:T('热门','Trending'),c:''};
+}
+
+/* ══════════════════════════════════════════════
+   状态
+══════════════════════════════════════════════ */
+var ST={tab:'forYou',cat:'all',ctry:'',city:'sydney',q:'',myTab:'created',tkTab:'all',picked:true};
+var CUR='pg-home',NAV=[],TABS=['pg-home','pg-my'],SHOWTAB=['pg-home','pg-my'];
+var detailId=null,manageId=null,coId=null,orderId=null,ticketOrderId=null,PAYM='token';
+
+/* 每页对应的渲染函数，跳转时自动调用，避免目标页空白 */
+function renderPage(id){
+  if(id==='pg-home'){renderLoc();renderCats();renderFeatured();renderList()}
+  else if(id==='pg-my')renderMy();
+  else if(id==='pg-create')renderCreate();
+  else if(id==='pg-detail'&&detailId)renderDetail();
+  else if(id==='pg-checkout'&&coId)renderCheckout();
+  else if(id==='pg-manage'&&manageId)renderManage();
+  else if(id==='pg-order'&&orderId)renderOrder();
+  else if(id==='pg-ticket'&&ticketOrderId)renderTicket();
+  else if(id==='pg-tickets')renderTk();
+}
+
+/* ══════════════════════════════════════════════
+   页面跳转（对齐 Football 的 go/goBack）
+══════════════════════════════════════════════ */
+function go(id,back){
+  var next=document.getElementById(id);if(!next)return;
+  if(!back&&id!==CUR){
+    if(TABS.indexOf(id)>=0)NAV=[];else NAV.push(CUR);
+  }
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active','back-anim')});
+  if(back)next.classList.add('back-anim');
+  next.classList.add('active');
+  var sc=next.querySelector('.scroll');if(sc)sc.scrollTop=0;
+  var showTab=SHOWTAB.indexOf(id)>=0;
+  document.getElementById('tabbar').style.display=showTab?'':'none';
+  var fab=document.getElementById('fab');if(fab)fab.classList.toggle('hidden',!showTab);
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-pg')===id)});
+  CUR=id;closeSheet();applyLang();renderPage(id);
+}
+function goBack(){
+  if(!NAV.length){if(SHOWTAB.indexOf(CUR)>=0)return;go('pg-home',true);return}
+  go(NAV.pop(),true);
+}
+function toast(cn,en){var t=document.getElementById('toast');t.textContent=T(cn,en);
+  t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on')},1900)}
+
+/* ══════════════════════════════════════════════
+   首页渲染
+══════════════════════════════════════════════ */
+/* 位置即上下文：选了国家→按国家过滤；选了城市→同城 + 线上。
+   localRank 仅决定排序（同城最前 → 线上 → 其他） */
+function localRank(e){
+  if(e.city===ST.city)return 0;
+  if(e.type==='online'||e.city==='global')return 1;
+  return 2;
+}
+function filtered(){
+  var l=store.list();
+  if(ST.cat!=='all')l=l.filter(function(e){return e.cat===ST.cat});
+  if(ST.ctry)l=l.filter(function(e){return e.ctry===ST.ctry||e.type==='online'||e.city==='global'});
+  else if(ST.city)l=l.filter(function(e){return e.city===ST.city||e.city==='global'||e.type==='online'});
+  if(ST.q){var q=ST.q.toLowerCase();l=l.filter(function(e){return (e.name+' '+e.org+' '+e.loc).toLowerCase().indexOf(q)>=0})}
+  return l;
+}
+
+function renderFeatured(){
+  var l=filtered().filter(function(e){return e.feat});
+  var rail=document.getElementById('featuredRail');
+  if(!l.length){rail.innerHTML='<div class="empty" style="flex:0 0 350px"><b>'+T('暂无精选','No featured events')+'</b></div>';
+    document.getElementById('featCount').textContent='';return}
+  rail.innerHTML=l.map(function(e){
+    return '<div class="bn" onclick="openDetail(\''+e.id+'\')">'+
+      '<img class="bn-img" src="'+coverOf(e)+'" alt="" loading="lazy">'+
+      '<div class="bn-scr"></div>'+
+      '<div class="bn-tag">'+catOf(e.cat)+'</div>'+
+      '<div class="bn-t">'+esc(e.name)+'</div>'+
+      '<div class="bn-s">📅 '+fDate(e.start)+' · '+(e.loc?esc(e.loc):T('线上','Online'))+'</div>'+
+      '<div class="bn-s bn-org">'+e.av+' '+esc(e.org)+'</div>'+
+      '<div class="bn-f">'+priceOf(e)+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('featCount').textContent=l.length+' '+T('个','');
+}
+
+function renderCats(){
+  var rail=document.getElementById('catRail');
+  var items=[{id:'all',label:T('全部','All'),em:'✨',g:'g-community',img:''}].concat(CATS.map(function(c){
+    return{id:c.id,label:(LANG==='cn'?c.zh:c.en),em:c.em,g:gClass(c.id),img:catCover(c.id)}}));
+  rail.innerHTML=items.map(function(c){
+    return '<div class="cat '+(ST.cat===c.id?'on':'')+'" onclick="setCat(\''+c.id+'\')">'+
+      '<div class="cico '+c.g+(c.img?' hasimg':'')+'">'+(c.img?'<img src="'+c.img+'" alt="">':'')+
+      '<span class="cem">'+c.em+'</span></div><span>'+c.label+'</span></div>';
+  }).join('');
+}
+
+function ecardHTML(e){
+  var r=reasonOf(e),fav=ustore.isFav(e.id);
+  var loc=e.type==='online'?T('线上','Online'):(e.loc||cityOf(e.city));
+  return '<div class="evrow" onclick="openDetail(\''+e.id+'\')">'+
+    '<img class="rw-img" src="'+coverOf(e)+'" alt="" loading="lazy">'+
+    '<div class="rw-body">'+
+      '<div class="rw-t">'+esc(e.name)+'</div>'+
+      '<div class="rw-m">📅 '+fDate(e.start)+' · '+fTime(e.start)+' · 📍 '+esc(loc)+'</div>'+
+      '<div class="rw-b"><span class="rw-cat">'+catOf(e.cat)+'</span>'+
+      '<span class="rw-tag '+r.c+'">'+r.t+'</span>'+
+      '<span class="rw-soc">👥 '+kfmt(goingOf(e))+'</span>'+
+      '<b class="rw-price '+(priceFree(e)?'free':'')+'">'+priceOf(e)+'</b></div>'+
+    '</div>'+
+    '<div class="rw-fav '+(fav?'on':'')+'" onclick="event.stopPropagation();quickFav(\''+e.id+'\')">'+(fav?'♥':'♡')+'</div>'+
+  '</div>';
+}
+
+function renderList(){
+  var l=filtered();
+  /* Near By：严格线下。选了国家→该国线下；选了城市→同城线下；全部→所有线下 */
+  var list=(ST.tab==='nearby')?l.filter(function(e){
+    return e.type==='offline'&&(ST.ctry?e.ctry===ST.ctry:(ST.city?e.city===ST.city:true));
+  }):l.filter(function(e){return !e.feat});
+  if(ST.tab==='forYou')list=list.slice().sort(function(a,b){return localRank(a)-localRank(b)});
+  var el=document.getElementById('eventList');
+  el.innerHTML=list.length?list.map(ecardHTML).join(''):
+    '<div class="empty"><b>'+T('该地区暂无活动','No events here yet')+'</b><p>'+
+    (ST.q?T('换个筛选条件试试','Try changing your filters')
+          :T('换个城市或分类试试，或去线上活动看看','Try another city or category — or browse online events'))+'</p></div>';
+}
+
+function setTab(t){ST.tab=t;
+  document.getElementById('segForYou').classList.toggle('on',t==='forYou');
+  document.getElementById('segNear').classList.toggle('on',t==='nearby');
+  renderList()}
+function setCat(c){ST.cat=c;renderCats();renderFeatured();renderList()}
+function onSearch(v){ST.q=v;renderFeatured();renderList()}
+function quickFav(id){var a=ustore.togFav(id);toast('已收藏','Saved','removed');renderList()}
+
+function renderLoc(){
+  var c=CITIES.filter(function(x){return x.id===ST.city})[0];
+  var city=ST.ctry?ctryOf(ST.ctry):(c?(LANG==='cn'?c.zh:c.en):T('全部','All'));
+  var fl=(ST.ctry?ctryFl(ST.ctry):(c?ctryFl(c.c):'🌍'));
+  document.getElementById('locCity').innerHTML=esc(city)+' <span>'+fl+'</span>';
+  document.getElementById('locSub').textContent=
+    ST.ctry?(T('正在展示','Showing ')+ctryOf(ST.ctry)+T('的活动',' events'))
+    :(ST.city?T('正在展示','Showing ')+city+T('的活动',' events')
+    :T('正在展示全球活动','Showing events worldwide'));
+  document.getElementById('locAct').textContent=T('更换','Change');
+}
+
+/* ══════════════════════════════════════════════
+   位置选择：两级 sheet（国家 → 城市）
+══════════════════════════════════════════════ */
+var sheetLevel='country',sheetCtry='';
+function openLocSheet(){sheetLevel='country';renderLocSheet();openSheet()}
+function renderLocSheet(){
+  var sh=document.getElementById('sheet'),h='';
+  if(sheetLevel==='country'){
+    h='<div class="grab"></div><h4>'+T('选择国家','Select country')+'</h4>'+
+      '<div class="sh-sub">'+T('先选国家，再选城市','Pick a country, then a city')+'</div>'+
+      '<button class="sopt '+(ST.ctry===''&&ST.city===''?'on':'')+'" onclick="pickAll()">'+
+        '<span class="sopt-em">🌍</span><div class="sopt-t"><b>'+T('全部国家','All countries')+'</b>'+
+        '<span>'+T('不限国家，看全部活动','Show events from everywhere')+'</span></div><div class="radio"></div></button>';
+    COUNTRIES.forEach(function(c){
+      h+='<button class="sopt '+(ST.ctry===c.id?'on':'')+'" onclick="pickCtry(\''+c.id+'\')">'+
+        '<span class="sopt-em">'+c.fl+'</span><div class="sopt-t"><b>'+(LANG==='cn'?c.zh:c.en)+'</b>'+
+        '<span>'+CITIES.filter(function(x){return x.c===c.id}).length+' '+T('个城市','cities')+'</span></div>'+
+        '<div class="radio"></div></button>';
+    });
+  }else{
+    var c=COUNTRIES.filter(function(x){return x.id===sheetCtry})[0];
+    h='<div class="grab"></div>'+
+      '<button class="sopt back" onclick="sheetLevel=\'country\';renderLocSheet()">‹ '+T('返回国家','Back to countries')+'</button>'+
+      '<h4>'+T('选择城市','Select city')+'</h4>'+
+      '<div class="sh-sub">'+c.fl+' '+(LANG==='cn'?c.zh:c.en)+'</div>'+
+      '<button class="sopt '+(ST.ctry===sheetCtry&&ST.city===''?'on':'')+'" onclick="pickCtryAll()">'+
+        '<span class="sopt-em">🏙️</span><div class="sopt-t"><b>'+T('全国','All cities')+'</b>'+
+        '<span>'+T('该国全部城市','Every city in this country')+'</span></div><div class="radio"></div></button>';
+    CITIES.filter(function(x){return x.c===sheetCtry}).forEach(function(ct){
+      h+='<button class="sopt '+(ST.city===ct.id?'on':'')+'" onclick="pickCity(\''+ct.id+'\')">'+
+        '<span class="sopt-em">📍</span><div class="sopt-t"><b>'+(LANG==='cn'?ct.zh:ct.en)+'</b></div>'+
+        '<div class="radio"></div></button>';
+    });
+  }
+  sh.innerHTML=h;
+}
+function pickCtry(id){sheetCtry=id;sheetLevel='city';renderLocSheet()}
+function pickCity(id){ST.city=id;ST.ctry='';ST.picked=true;renderLoc();closeSheet();renderFeatured();renderList();
+  toast('已切换城市','Location updated')}
+function pickCtryAll(){ST.ctry=sheetCtry;ST.city='';ST.picked=true;renderLoc();closeSheet();renderFeatured();renderList();
+  toast('已切换国家','Country updated')}
+function pickAll(){ST.ctry='';ST.city='';ST.picked=true;renderLoc();closeSheet();renderFeatured();renderList();
+  toast('已显示全部','Showing all')}
+function openSheet(){document.getElementById('mask').classList.add('on');document.getElementById('sheet').classList.add('on')}
+function closeSheet(){document.getElementById('mask').classList.remove('on');document.getElementById('sheet').classList.remove('on')}
+
+/* ══════════════════════════════════════════════
+   详情
+══════════════════════════════════════════════ */
+function openDetail(id){detailId=id;ustore.view(id);renderDetail();go('pg-detail')}
+function renderDetail(){
+  var e=store.get(detailId);if(!e)return;
+  var hero=document.getElementById('dhero');
+  hero.className='dhero';
+  var himg=document.getElementById('dheroImg');if(himg)himg.src=coverOf(e);
+  document.getElementById('dheroCat').textContent=catOf(e.cat);
+  var f=ustore.isFav(e.id),fb=document.getElementById('favBtn');
+  fb.textContent=f?'♥':'♡';fb.className='dh-round'+(f?' on':'');
+
+  var online=e.type==='online',loc=online?T('线上','Online'):(e.loc||cityOf(e.city));
+  var dur=(e.dh?e.dh+T('小时','h')+' ':'')+(e.dm?e.dm+T('分','m'):'');
+  var s0=sumT(e.tiers);
+  var h='<div class="dtitle">'+esc(e.name)+'</div>'+
+    '<div class="dorg"><div class="do-av">'+e.av+'</div><div><div class="do-n">'+esc(e.org)+'</div>'+
+    '<div class="do-s">'+T('主办方','Organizer')+'</div></div></div>'+
+    '<div class="card" style="padding:4px 14px">'+
+      kv('📅',T('日期','Date'),fDate(e.start)+' · '+fTime(e.start))+
+      kv('📍',T('地点','Location'),esc(loc))+
+      kv('⏱️',T('时长','Duration'),dur)+
+      (goingOf(e)?kv('👥',T('已报名','Going'),kfmt(goingOf(e))+' '+T('人已报名','people going')):'')+
+      (priceFree(e)?kv('💰',T('门票','Entry'),T('免费入场','Free entry')):kv('💰',T('起售价','From'),moneyOf(e,s0.minPrice)))+
+    '</div>'+
+    '<div class="dsec">'+T('活动介绍','About')+'</div>'+
+    '<div class="dabout">'+esc(e.desc)+'</div>'+
+    '<div class="dsec">'+T('票种','Tickets')+'</div>'+
+    e.tiers.map(function(t){
+      return '<div class="tier"><div><div class="tier-n">'+esc(t.name)+'</div>'+
+        '<div class="tier-s">'+t.stock+' '+T('剩余','left')+'</div></div>'+
+        '<div class="tier-p">'+(t.price?moneyOf(e,t.price):T('免费','Free'))+'</div></div>';
+    }).join('');
+  document.getElementById('dbody').innerHTML=h;
+
+  var s=sumT(e.tiers);
+  /* 已有票券 / 有未支付订单 → CTA 直接进入对应流程 */
+  var myTkt=OSTORE.list().filter(function(o){return o.ev===e.id&&(o.status==='paid'||o.status==='used')})[0];
+  var myPend=OSTORE.list().filter(function(o){return o.ev===e.id&&o.status==='pending'})[0];
+  document.getElementById('dcta').innerHTML=
+    (myTkt?
+      '<div class="cta-price">'+T('状态','Status')+'<b style="color:var(--brand)">'+(myTkt.status==='used'?T('已核销','Verified'):T('已购票','Paid'))+'</b></div>'+
+      '<button class="btn" onclick="openTicket(\''+myTkt.id+'\')">'+T('查看电子票','View e-ticket')+'</button>'
+    :myPend?
+      '<div class="cta-price">'+T('待支付','Unpaid')+'<b>'+moneyOf(e,myPend.amt)+'</b></div>'+
+      '<button class="btn" onclick="openOrder(\''+myPend.id+'\')">'+T('继续支付 · 剩','Continue payment · ')+mmss(myPend.expires-Date.now())+'</button>'
+    :
+      '<div class="cta-price">'+T('票价','Price')+'<b>'+(priceFree(e)?T('免费','Free'):moneyOf(e,s.minPrice))+'</b></div>'+
+      '<button class="btn" onclick="doBook()">'+(priceFree(e)?T('免费报名','Register free'):T('购买门票','Buy tickets'))+'</button>');
+}
+function kv(ic,l,v){return '<div class="kv"><span class="k-ic">'+ic+'</span><div class="k-main">'+
+  '<div class="k-l">'+l+'</div><div class="k-v">'+v+'</div></div></div>'}
+function toggleFav(){var e=store.get(detailId);if(!e)return;
+  var a=ustore.togFav(e.id);toast(a?'已收藏':'已取消收藏',a?'Saved':'Removed');renderDetail()}
+function shareEvent(){var e=store.get(detailId);
+  try{navigator.clipboard&&navigator.clipboard.writeText(location.href.split('?')[0]+'?e='+e.id)}catch(x){}
+  toast('链接已复制','Link copied')}
+function doBook(){var e=store.get(detailId);if(!e)return;
+  if(priceFree(e)){ustore.book(e.id);toast('已预约','Booked');ST.myTab='booked';renderMy();go('pg-my');return}
+  openCheckout(e.id)}
+
+/* ══════════════════════════════════════════════
+   My Events
+══════════════════════════════════════════════ */
+var MYT=[
+  {id:'created',cn:'我创建的',en:'Created',em:'📝'},
+  {id:'fav',cn:'收藏的',en:'Saved',em:'♥'},
+  {id:'att',cn:'参与过的',en:'Attended',em:'✅'},
+  {id:'his',cn:'浏览历史',en:'History',em:'🕘'},
+  {id:'book',cn:'预约的',en:'Booked',em:'🔖'}
+];
+function myCount(id){
+  var m=meta();
+  if(id==='created')return store.list().filter(function(e){return e.org==='Ahmad Rahman'}).length;
+  if(id==='fav')return m.fav.length;
+  if(id==='att')return m.att.length;
+  if(id==='his')return m.his.length;
+  if(id==='book')return m.book.length;
+  return 0;
+}
+function myList(id){
+  var all=store.list(),m=meta(),ids;
+  if(id==='created')return all.filter(function(e){return e.org==='Ahmad Rahman'});
+  if(id==='fav')ids=m.fav;else if(id==='att')ids=m.att;else if(id==='his')ids=m.his;
+  else if(id==='book')ids=m.book;else ids=m.paid;
+  return ids.map(function(i){return all.filter(function(e){return e.id===i})[0]}).filter(Boolean);
+}
+var MYEMPTY={created:['还没有创建活动','Events you create appear here'],
+  fav:['还没有收藏','Tap the heart on any event to save it'],
+  att:['还没有参与记录','Events you attended appear here'],
+  his:['还没有浏览记录','Events you browse appear here'],
+  book:['还没有预约','Free events you register for appear here']};
+function renderMy(){
+  var tabs=document.getElementById('myTabs');
+  tabs.innerHTML=MYT.map(function(t){
+    return '<button class="mtab '+(ST.myTab===t.id?'on':'')+'" onclick="setMyTab(\''+t.id+'\')">'+
+      t.em+' '+T(t.cn,t.en)+'<span class="cnt">'+myCount(t.id)+'</span></button>';
+  }).join('');
+  /* 票券入口卡（独立于 tab，点击进入 pg-tickets） */
+  var os=OSTORE.list().filter(function(o){return o.status!=='expired'});
+  var valid=os.filter(function(o){return o.status==='paid'}).length;
+  document.getElementById('tkeSub').textContent=valid?
+    T('二维码电子票 · 线下扫码入场','QR e-tickets · scan at the door'):
+    T('购买后在这里查看电子票','Your tickets appear here after purchase');
+  document.getElementById('tkeCount').textContent=valid?
+    valid+' '+T('张有效','valid'):'—';
+
+  var el=document.getElementById('myList');
+  var l=myList(ST.myTab);
+  if(!l.length){var em=MYEMPTY[ST.myTab];
+    el.innerHTML='<div class="empty" style="margin-top:16px"><b>'+T(em[0],em[1])+'</b></div>';return}
+  var isCreated=(ST.myTab==='created');
+  el.innerHTML=l.map(function(e){
+    return '<div class="ecard" onclick="'+(isCreated?'openManage(\''+e.id+'\')':'openDetail(\''+e.id+'\')')+'">'+
+      '<div class="ec-thumb"><img src="'+coverOf(e)+'" alt="" loading="lazy"></div>'+
+      '<div class="ec-body">'+
+        '<div class="ec-top"><span class="ec-cat">'+catOf(e.cat)+'</span>'+
+        (isCreated?'<span class="ec-reason">'+T('管理','Manage')+'</span>':'')+'</div>'+
+        '<div class="ec-title">'+esc(e.name)+'</div>'+
+        '<div class="ec-meta">📅 '+fDate(e.start)+' · '+fTime(e.start)+'</div>'+
+        '<div class="ec-meta">📍 '+esc(e.type==='online'?T('线上','Online'):(e.loc||cityOf(e.city)))+'</div>'+
+        '<div class="ec-bot"><span class="ec-price '+(priceFree(e)?'free':'')+'">'+priceOf(e)+'</span></div>'+
+      '</div></div>';
+  }).join('');
+}
+function setMyTab(id){ST.myTab=id;renderMy()}
+
+/* ══════════════════════════════════════════════
+   My Tickets（独立票券页）
+══════════════════════════════════════════════ */
+var TKSEG=[
+  {id:'all',cn:'全部',en:'All',em:'🎟️'},
+  {id:'pend',cn:'待支付',en:'To Pay',em:'⏳'},
+  {id:'up',cn:'待使用',en:'Upcoming',em:'✅'},
+  {id:'used',cn:'已核销',en:'Used',em:'📌'},
+  {id:'ref',cn:'已退款',en:'Refunded',em:'↩️'}
+];
+function tkSegCount(seg){
+  var a=OSTORE.list();
+  if(seg==='all')return a.filter(function(o){return o.status!=='expired'}).length;
+  if(seg==='pend')return a.filter(function(o){return o.status==='pending'}).length;
+  if(seg==='up')return a.filter(function(o){return o.status==='paid'}).length;
+  if(seg==='used')return a.filter(function(o){return o.status==='used'}).length;
+  if(seg==='ref')return a.filter(function(o){return o.status==='refunded'}).length;
+  return 0;
+}
+function renderTk(){
+  var tabs=document.getElementById('tkTabs');
+  tabs.innerHTML=TKSEG.map(function(t){
+    return '<button class="mtab '+(ST.tkTab===t.id?'on':'')+'" onclick="setTkTab(\''+t.id+'\')">'+
+      t.em+' '+T(t.cn,t.en)+'<span class="cnt">'+tkSegCount(t.id)+'</span></button>';
+  }).join('');
+  var os=OSTORE.list().filter(function(o){
+    if(ST.tkTab==='all')return o.status!=='expired';
+    if(ST.tkTab==='pend')return o.status==='pending';
+    if(ST.tkTab==='up')return o.status==='paid';
+    if(ST.tkTab==='used')return o.status==='used';
+    if(ST.tkTab==='ref')return o.status==='refunded';
+    return false;
+  });
+  var el=document.getElementById('tkList');
+  if(!os.length){
+    el.innerHTML='<div class="empty" style="margin:16px 20px 0"><b>'+T('暂无票券','No tickets here')+'</b><p>'+
+      T('购票后电子票会出现在这里，可用于线下扫码入场','Tickets you buy appear here with a QR code for entry')+'</p></div>';return}
+  el.innerHTML=os.map(function(o){
+    var e=store.get(o.ev);if(!e)return '';
+    var pend=o.status==='pending';
+    return '<div class="ecard" onclick="'+(pend?
+        "openOrder('"+o.id+"')":"openTicket('"+o.id+"')")+'">'+
+      '<div class="ec-thumb"><img src="'+coverOf(e)+'" alt="" loading="lazy"></div>'+
+      '<div class="ec-body">'+
+        '<div class="ec-top"><span class="ec-cat">'+catOf(e.cat)+'</span>'+tkStatus(o)+'</div>'+
+        '<div class="ec-title">'+esc(e.name)+'</div>'+
+        '<div class="ec-meta">📅 '+fDate(e.start)+' · '+fTime(e.start)+'</div>'+
+        '<div class="ec-meta">'+(pend?'⏳ '+T('剩余','Left')+' <b id="myCd'+o.id+'">'+mmss(o.expires-Date.now())+'</b>'
+          :(o.status==='used'?'✅ '+T('已核销','Verified')+' · '+fdt(o.usedAt)
+          :(o.status==='refunded'?'↩️ '+T('已退款','Refunded')+' · '+fdt(o.refundedAt)
+          :'🎟️ '+esc(o.ticket||'—'))))+' · '+orderQty(o)+' '+T('张','tickets')+' · '+moneyOf(e,o.amt)+'</div>'+
+      '</div></div>';
+  }).join('');
+}
+function setTkTab(id){ST.tkTab=id;renderTk()}
+
+/* ══════════════════════════════════════════════
+   创建
+══════════════════════════════════════════════ */
+var CF={name:'',desc:'',type:'offline',loc:'',link:'',date:'',time:'',dh:2,dm:0,cat:'quran',ctry:'au',city:'sydney',
+  paid:false,tiers:null,av:'🎪',img:'',org:'',capMode:'unlimited',cap:0,vis:'public',dis:''};
+var TPRESETS=['VIP','Regular','Economy','Family'];
+var AVATARS=['🎪','🕌','🎤','🖼️','🍢','🏃','📚','🤲','💼','🎨','☕','🌿'];
+var COVLIST=['music-night','music-sufi','food-festival','food-street','sport-run','sport-beach','sport-yoga',
+  'culture-calligraphy','culture-mosque','culture-fashion','community-iftar','business-meetup',
+  'learning-seminar','family-kids'];
+function resetCF(){CF={name:'',desc:'',type:'offline',loc:'',link:'',date:'',time:'',dh:2,dm:0,cat:'quran',ctry:'au',city:'sydney',
+  paid:false,tiers:null,av:'🎪',img:'',org:'',capMode:'unlimited',cap:0,vis:'public',dis:''}}
+function resetTiers(){CF.tiers=[{id:'t1',name:'General Admission',price:100,stock:200}]}
+function renderCreate(){
+  if(!CF.tiers)resetTiers();
+  if(!CF.date){var d=new Date(Date.now()+86400000*14);CF.date=d.toISOString().slice(0,10)}
+  if(!CF.time)CF.time='18:00';
+  var el=document.getElementById('createForm');
+  el.innerHTML=
+  '<div class="fs"><div class="fs-t">🎪 '+T('封面 (Cover)','Cover')+'</div>'+
+    '<div class="covpick">'+COVLIST.map(function(n){
+      return '<button class="cov '+(CF.img===n?'on':'')+'" onclick="CF.img=\''+n+'\';renderCreate()">'+
+        '<img src="'+IMGB+n+'.jpg" alt=""></button>'}).join('')+
+    '</div>'+
+    '<div class="fld"><label>'+T('主办方','Organizer')+'</label>'+
+    '<input type="text" value="'+esc(CF.org)+'" placeholder="'+T('谁在主办这场活动？','Who is hosting this?')+'" oninput="CF.org=this.value"></div>'+
+  '</div>'+
+
+  '<div class="fs"><div class="fs-t">📝 '+T('基本信息','Basic info')+'</div>'+
+    '<div class="fld"><label>'+T('活动名称','Event name')+'</label>'+
+    '<input type="text" value="'+esc(CF.name)+'" placeholder="'+T('给活动起个名字','Give your event a name')+'" oninput="CF.name=this.value"></div>'+
+    '<div class="fld"><label>'+T('活动介绍','Description')+'</label>'+
+    '<textarea placeholder="'+T('参与者需要知道什么？','What should attendees know?')+'" oninput="CF.desc=this.value">'+esc(CF.desc)+'</textarea></div>'+
+    '<div class="fld"><label>'+T('分类','Category')+'</label><select onchange="CF.cat=this.value">'+
+      CATS.map(function(c){return '<option value="'+c.id+'"'+(CF.cat===c.id?' selected':'')+'>'+c.em+' '+(LANG==='cn'?c.zh:c.en)+'</option>'}).join('')+
+    '</select></div>'+
+  '</div>'+
+
+  '<div class="fs"><div class="fs-t">📍 '+T('位置','Location')+'</div>'+
+    '<div class="seg" style="margin:0 0 11px">'+
+      '<button class="'+(CF.type==='offline'?'on':'')+'" onclick="CF.type=\'offline\';renderCreate()">'+T('线下','Offline')+'</button>'+
+      '<button class="'+(CF.type==='online'?'on':'')+'" onclick="CF.type=\'online\';renderCreate()">'+T('线上','Online')+'</button>'+
+    '</div>'+
+    (CF.type==='offline'?'<div class="fld"><label>'+T('场地地址','Venue')+'</label>'+
+      '<input type="text" value="'+esc(CF.loc)+'" placeholder="'+T('场地地址','Venue address')+'" oninput="CF.loc=this.value"></div>'
+      :'<div class="fld"><label>'+T('会议链接','Meeting link')+'</label>'+
+      '<input type="text" value="'+esc(CF.link)+'" placeholder="https://meet.example.com/..." oninput="CF.link=this.value"></div>')+
+    '<div class="frow"><div class="fld"><label>'+T('国家','Country')+'</label><select onchange="CF.ctry=this.value">'+
+      COUNTRIES.map(function(c){return '<option value="'+c.id+'"'+(CF.ctry===c.id?' selected':'')+'>'+c.fl+' '+(LANG==='cn'?c.zh:c.en)+'</option>'}).join('')+
+      '</select></div>'+
+      '<div class="fld"><label>'+T('城市','City')+'</label><select onchange="CF.city=this.value">'+
+      CITIES.filter(function(c){return CF.type==='online'||c.c===CF.ctry}).map(function(c){
+        return '<option value="'+c.id+'"'+(CF.city===c.id?' selected':'')+'>'+(LANG==='cn'?c.zh:c.en)+'</option>'}).join('')+
+      '</select></div></div>'+
+  '</div>'+
+
+  '<div class="fs"><div class="fs-t">📅 '+T('时间','When')+'</div>'+
+    '<div class="frow"><div class="fld"><label>'+T('日期','Date')+'</label>'+
+    '<input type="date" value="'+CF.date+'" oninput="CF.date=this.value"></div>'+
+    '<div class="fld"><label>'+T('时间','Time')+'</label>'+
+    '<input type="time" value="'+CF.time+'" oninput="CF.time=this.value"></div></div>'+
+    '<div class="frow"><div class="fld"><label>'+T('时长（小时）','Hours')+'</label>'+
+    '<input type="number" value="'+CF.dh+'" min="0" oninput="CF.dh=parseInt(this.value)||0"></div>'+
+    '<div class="fld"><label>'+T('时长（分钟）','Minutes')+'</label>'+
+    '<input type="number" value="'+CF.dm+'" min="0" oninput="CF.dm=parseInt(this.value)||0"></div></div>'+
+  '</div>'+
+
+  '<div class="fs"><div class="fs-t">👥 '+T('容量与可见性','Capacity & privacy')+'</div>'+
+    '<div class="seg" style="margin:0 0 11px">'+
+      '<button class="'+(CF.capMode==='unlimited'?'on':'')+'" onclick="CF.capMode=\'unlimited\';renderCreate()">'+T('不限制人数','Unlimited')+'</button>'+
+      '<button class="'+(CF.capMode==='limited'?'on':'')+'" onclick="CF.capMode=\'limited\';renderCreate()">'+T('限制人数','Limited')+'</button>'+
+    '</div>'+
+    (CF.capMode==='limited'?'<div class="fld"><label>'+T('最多人数','Max attendees')+'</label>'+
+      '<input type="number" value="'+CF.cap+'" min="1" placeholder="100" oninput="CF.cap=parseInt(this.value)||0"></div>':'')+
+    '<div class="seg" style="margin:0">'+
+      '<button class="'+(CF.vis==='public'?'on':'')+'" onclick="CF.vis=\'public\';renderCreate()">🌍 '+T('公开','Public')+'</button>'+
+      '<button class="'+(CF.vis==='private'?'on':'')+'" onclick="CF.vis=\'private\';renderCreate()">🔒 '+T('凭链接访问','Private')+'</button>'+
+    '</div>'+
+  '</div>'+
+
+  '<div class="fs"><div class="fs-t">🎟️ '+T('票务','Tickets')+'</div>'+
+    '<div class="seg" style="margin:0 0 11px">'+
+      '<button class="'+(!CF.paid?'on':'')+'" onclick="CF.paid=false;renderCreate()">'+T('免费','Free')+'</button>'+
+      '<button class="'+(CF.paid?'on':'')+'" onclick="CF.paid=true;renderCreate()">'+T('付费','Paid')+'</button>'+
+    '</div>'+
+    (CF.paid?'<div id="tierWrap">'+tierHTML()+'</div>'+
+      '<button class="addtier" onclick="addTier()">＋ '+T('添加票种','Add ticket type')+'（最多 4）'+'</button>'+
+      '<div class="fld"><label>'+T('优惠码（可选）','Discount code (optional)')+'</label>'+
+      '<input type="text" value="'+esc(CF.dis)+'" placeholder="EARLY20" oninput="CF.dis=this.value"></div>'
+      :'')+
+    (CF.paid?'':'<div class="note">'+T('免费活动不限票种，参与者可直接预约。','Free events need no ticket types — attendees register directly.')+'</div>')+
+  '</div>'+
+
+  '<div class="summ"><div class="summ-r"><span>'+T('可见性','Visibility')+'</span><b>'+(CF.vis==='public'?T('公开','Public'):T('凭链接','Private'))+'</b></div>'+
+    '<div class="summ-r"><span>'+T('时间','When')+'</span><b>'+fDate(CF.date||'2026-01-01')+' · '+fTime((CF.date||'2026-01-01')+' '+(CF.time||'18:00'))+'</b></div>'+
+    '<div class="summ-r"><span>'+T('票务','Tickets')+'</span><b>'+(CF.paid?sumT(CF.tiers).tierCount+' '+T('种票','type(s)'):T('免费','Free'))+'</b></div>'+
+  '</div>'+
+
+  '<button class="btn" style="width:100%;margin-bottom:20px" onclick="submitCreate()">'+T('发布活动','Publish Event')+'</button>';
+}
+function tierHTML(){
+  return CF.tiers.map(function(t,i){
+    return '<div class="te"><div class="te-h"><span class="te-n">'+T('票种','Ticket')+' '+(i+1)+'</span>'+
+      (i>0?'<span class="te-d" onclick="delTier('+i+')">✕ '+T('删除','Delete')+'</span>':'')+'</div>'+
+      '<div class="fld"><label>'+T('名称','Name')+'</label>'+
+      '<input type="text" value="'+esc(t.name)+'" oninput="CF.tiers['+i+'].name=this.value"></div>'+
+      '<div class="frow"><div class="fld"><label>'+T('价格','Price')+'</label>'+
+      '<input type="number" value="'+t.price+'" min="0" oninput="CF.tiers['+i+'].price=Math.max(0,parseInt(this.value)||0)"></div>'+
+      '<div class="fld"><label>'+T('库存','Stock')+'</label>'+
+      '<input type="number" value="'+t.stock+'" min="0" oninput="CF.tiers['+i+'].stock=Math.max(0,parseInt(this.value)||0)"></div></div>'+
+    '</div>';
+  }).join('');
+}
+function addTier(){if(CF.tiers.length>=4){toast('最多 4 种票','Max 4 ticket types');return}
+  CF.tiers.push({id:'t'+(CF.tiers.length+1),name:TPRESETS[CF.tiers.length%4],price:0,stock:100});renderCreate()}
+function delTier(i){if(CF.tiers.length<=1)return;CF.tiers.splice(i,1);renderCreate()}
+function submitCreate(){
+  if(!CF.name.trim()){toast('请填写活动名称','Please enter an event name');return}
+  if(!CF.desc.trim()){toast('请填写活动介绍','Please add a description');return}
+  if(CF.type==='offline'&&!CF.loc.trim()){toast('请填写场地地址','Please add a venue address');return}
+  if(CF.type==='online'&&!CF.link.trim()){toast('请填写会议链接','Please add a meeting link');return}
+  if(!CF.date||!CF.time){toast('请选择日期与时间','Please pick a date and time');return}
+  if(CF.paid&&CF.tiers.some(function(t){return !t.name.trim()})){toast('请填写每种票的名称','Please name each ticket type');return}
+  if(CF.paid&&CF.tiers.some(function(t){return t.stock<=0})){toast('库存需大于 0','Stock must be above 0');return}
+  var r=store.create({name:CF.name.trim(),desc:CF.desc.trim(),type:CF.type,
+    loc:CF.type==='offline'?CF.loc.trim():CF.link.trim(),
+    start:CF.date+' '+CF.time,dh:CF.dh,dm:CF.dm,
+    paid:CF.paid,tiers:CF.paid?CF.tiers:defTiers(),cat:CF.cat,ctry:CF.ctry,
+    city:CF.type==='online'?'global':CF.city,org:CF.org.trim()||'Ahmad Rahman',av:CF.av,
+    cap:CF.capMode==='limited'?CF.cap:0,vis:CF.vis,dis:CF.dis,img:CF.img});
+  toast('活动已发布','Event published');
+  resetCF();
+  ST.myTab='created';renderMy();go('pg-my');
+  setTimeout(function(){openManage(r.id)},260);
+}
+
+/* ══════════════════════════════════════════════
+   结算
+══════════════════════════════════════════════ */
+var COSEL={},CODIS='';
+function openCheckout(id){coId=id;var e=store.get(id);if(!e)return;
+  COSEL={};e.tiers.forEach(function(t){COSEL[t.id]=0});CODIS='';renderCheckout();go('pg-checkout')}
+function renderCheckout(){
+  var e=store.get(coId);if(!e)return;
+  document.getElementById('checkoutForm').innerHTML=
+    '<div class="card" style="padding:14px;margin-bottom:14px">'+
+      '<div style="font-size:15px;font-weight:800;line-height:1.3">'+esc(e.name)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);margin-top:5px">📅 '+fDate(e.start)+' · '+fTime(e.start)+'</div>'+
+    '</div>'+
+    e.tiers.map(function(t){
+      return '<div class="te"><div class="te-h"><span class="te-n">'+esc(t.name)+'</span></div>'+
+        '<div style="display:flex;align-items:center;gap:11px">'+
+        '<div style="flex:1"><div class="tier-p">'+moneyOf(e,t.price)+'</div>'+
+        '<div class="tier-s">'+t.stock+' '+T('剩余','left')+'</div></div>'+
+        '<div class="qty"><button class="qb" onclick="coDec(\''+t.id+'\')"'+(COSEL[t.id]<=0?' disabled':'')+'>−</button>'+
+        '<span class="qv">'+COSEL[t.id]+'</span>'+
+        '<button class="qb" onclick="coInc(\''+t.id+'\')">＋</button></div></div></div>';
+    }).join('')+
+    '<div class="fs" style="margin-top:14px"><div class="fld"><label>'+T('优惠码','Discount code')+'</label>'+
+    '<input type="text" id="coDis" value="'+esc(CODIS)+'" placeholder="EARLY20" oninput="CODIS=this.value;renderCoTotal()"></div>'+
+    '<div class="note">⏱️ '+T('提交订单后需在 30 分钟内完成支付，逾期订单自动取消。','Complete payment within 30 minutes after submitting, or the order expires automatically.')+'</div></div>';
+  renderCoTotal();
+}
+function coInc(id){var e=store.get(coId),t=e.tiers.filter(function(x){return x.id===id})[0];
+  if(COSEL[id]>=t.stock){toast('库存不足','Out of stock');return}COSEL[id]++;renderCheckout()}
+function coDec(id){COSEL[id]=Math.max(0,COSEL[id]-1);renderCheckout()}
+function renderCoTotal(){
+  var e=store.get(coId);if(!e)return;
+  var q=0,p=0;e.tiers.forEach(function(t){q+=COSEL[t.id];p+=COSEL[t.id]*t.price});
+  var d=(CODIS.toUpperCase()==='EARLY20')?Math.round(p*0.2):0,f=p-d;
+  document.getElementById('coTotal').innerHTML=
+    '<div class="cta-price">'+T('共','Total')+' '+q+' '+T('张','tickets')+'<b>'+moneyOf(e,f)+'</b></div>'+
+    '<button class="btn" onclick="coSubmit()"'+(q<=0?' disabled':'')+'>'+T('提交订单','Create order')+'</button>';
+}
+/* 提交订单 → 进入确认页（30 分钟支付窗口） */
+function coSubmit(){
+  var e=store.get(coId);if(!e)return;
+  var q=0,p=0;e.tiers.forEach(function(t){q+=COSEL[t.id];p+=COSEL[t.id]*t.price});
+  if(q<=0){toast('请先选择票数','Select tickets first');return}
+  var d=(CODIS.toUpperCase()==='EARLY20')?Math.round(p*0.2):0;
+  var o=OSTORE.create(e.id,COSEL,CODIS,p-d);
+  orderId=o.id;renderOrder();go('pg-order');
+  toast('订单已创建，请在 30 分钟内支付','Order created — pay within 30 min');
+}
+
+/* ══════════════════════════════════════════════
+   确认订单（倒计时 30 分钟）
+══════════════════════════════════════════════ */
+var PAYMS=[
+  {id:'token',ic:'🪙',cn:'Wahda Token',scn:'余额 1,280 WT',sen:'Balance 1,280 WT',en:'Wahda Token',rec:1},
+  {id:'card',ic:'💳',cn:'Visa ·· 4242',scn:'信用卡 · 3D Secure',sen:'Credit card · 3D Secure',en:'Visa ·· 4242',rec:0},
+  {id:'apple',ic:'🍎',cn:'Apple Pay',scn:'面容 ID 快捷支付',sen:'Pay with Face ID',en:'Apple Pay',rec:0}
+];
+function mmss(ms){ms=Math.max(0,ms);var m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);
+  return (m<10?'0':'')+m+':'+(s<10?'0':'')+s}
+function fdt(ts){var d=new Date(ts),p=function(x){return (x<10?'0':'')+x};
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
+function orderQty(o){var n=0;for(var k in o.sel)n+=o.sel[k]||0;return n}
+
+function renderOrder(){
+  var o=OSTORE.get(orderId);if(!o)return;
+  var e=store.get(o.ev);if(!e)return;
+  var pend=o.status==='pending';
+  var el=document.getElementById('orderForm');
+  var lines=e.tiers.filter(function(t){return (o.sel[t.id]||0)>0}).map(function(t){
+    return '<div class="summ-r"><span>'+esc(t.name)+' × '+o.sel[t.id]+'</span><b>'+moneyOf(e,t.price*o.sel[t.id])+'</b></div>';
+  }).join('');
+  var gross=0;e.tiers.forEach(function(t){gross+=(o.sel[t.id]||0)*t.price});
+  var disc=(o.dis&&o.dis.toUpperCase()==='EARLY20')?Math.round(gross*0.2):0;
+
+  el.innerHTML=
+    (pend?
+      '<div class="cdbanner" style="margin:0 0 14px"><span class="cd-ic">⏳</span>'+
+      '<div class="cd-txt">'+T('请在 30 分钟内完成支付，逾期订单自动取消','Complete payment within 30 minutes or the order expires')+'</div>'+
+      '<span class="cd-time" id="cdTime">'+mmss(o.expires-Date.now())+'</span></div>'
+      :
+      '<div class="cdbanner expired" style="margin:0 0 14px"><span class="cd-ic">⛔</span>'+
+      '<div class="cd-txt">'+T('订单已失效 —— 未在 30 分钟内完成支付','Expired — payment was not completed in 30 minutes')+'</div></div>')+
+
+    '<div class="card" style="padding:14px;margin-bottom:14px">'+
+      '<div style="font-size:15px;font-weight:800;line-height:1.3">'+esc(e.name)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);margin-top:5px">📅 '+fDate(e.start)+' · '+fTime(e.start)+
+      ' · 📍 '+esc(e.type==='online'?T('线上','Online'):(e.loc||cityOf(e.city)))+'</div>'+
+    '</div>'+
+
+    '<div class="fs" style="margin-bottom:14px"><div class="fs-t">🧾 '+T('订单明细','Order details')+'</div>'+
+      '<div class="summ">'+lines+
+        (disc?'<div class="summ-r"><span>'+T('优惠 EARLY20','EARLY20 discount')+'</span><b style="color:var(--danger)">-'+moneyOf(e,disc)+'</b></div>':'')+
+        '<div class="summ-r"><span>'+T('合计','Total')+' · '+orderQty(o)+' '+T('张','tickets')+'</span>'+
+        '<b style="font-size:15px;color:var(--brand)">'+moneyOf(e,o.amt)+'</b></div>'+
+        '<div class="summ-r"><span>'+T('订单编号','Order no.')+'</span><b>'+o.id+'</b></div>'+
+        '<div class="summ-r"><span>'+T('下单时间','Placed at')+'</span><b>'+fdt(o.created)+'</b></div>'+
+      '</div></div>'+
+
+    (pend?'<div class="fs" style="margin-bottom:14px"><div class="fs-t">💳 '+T('支付方式','Payment method')+'</div>'+
+      PAYMS.map(function(pm){
+        return '<button class="payopt '+(PAYM===pm.id?'on':'')+'" onclick="PAYM=\''+pm.id+'\';renderOrder()">'+
+          '<span class="po-ic">'+pm.ic+'</span>'+
+          '<div class="po-t"><b>'+(LANG==='cn'?pm.cn:pm.en)+'</b><span>'+T(pm.scn,pm.sen)+'</span></div>'+
+          (pm.rec?'<span class="po-badge">'+T('推荐','Best')+'</span>':'')+
+        '</button>';
+      }).join('')+
+      '<div class="note">🔒 '+T('支付由 Wahda Pay 安全加密处理，支持 3D Secure 验证。','Payments are encrypted and processed securely by Wahda Pay.')+'</div>'+
+    '</div>':'');
+  renderOrderCta();
+}
+function renderOrderCta(){
+  var o=OSTORE.get(orderId);if(!o)return;
+  var e=store.get(o.ev);if(!e)return;
+  var cta=document.getElementById('orderCta');
+  if(o.status==='pending'){
+    cta.innerHTML=
+      '<div class="cta-price">'+T('需支付','Amount')+'<b>'+moneyOf(e,o.amt)+'</b></div>'+
+      '<button class="btn" id="payBtn" onclick="payOrder()">'+T('立即支付','Pay now')+'</button>';
+  }else{
+    cta.innerHTML='';
+    document.getElementById('orderForm').insertAdjacentHTML('beforeend',
+      '<div class="orow-actions">'+
+        '<button class="btn ghost" onclick="openDetail(\''+e.id+'\')">'+T('返回活动','Back to event')+'</button>'+
+        '<button class="btn" onclick="openCheckout(\''+e.id+'\')">'+T('重新下单','Order again')+'</button>'+
+      '</div>');
+  }
+}
+/* 模拟支付：1.3s 处理 → 出票 */
+function payOrder(){
+  var o=OSTORE.get(orderId);if(!o||o.status!=='pending')return;
+  var btn=document.getElementById('payBtn');
+  if(btn){btn.disabled=true;btn.textContent=T('支付中…','Processing…')}
+  setTimeout(function(){
+    var o2=OSTORE.pay(orderId);
+    if(!o2){renderOrder();toast('订单已失效','Order expired');return}
+    var e=store.get(o2.ev);
+    if(e){store.update(e.id,{going:(e.going||0)+orderQty(o2)})}
+    ticketOrderId=orderId;
+    toast('支付成功','Payment successful');
+    renderTicket();go('pg-ticket');
+  },1300);
+}
+function openOrder(id){orderId=id;renderOrder();go('pg-order')}
+
+/* ══════════════════════════════════════════════
+   电子票（二维码核销）
+══════════════════════════════════════════════ */
+function qrSVG(text){
+  try{
+    var qr=qrcode(0,'M');qr.addData(text);qr.make();
+    var n=qr.getModuleCount(),p='',r,c;
+    for(r=0;r<n;r++)for(c=0;c<n;c++)if(qr.isDark(r,c))
+      p+='<path d="M'+c+' '+r+'h1v1h-1z"/>';
+    return '<svg viewBox="0 0 '+n+' '+n+'" shape-rendering="crispEdges" fill="#161513" xmlns="http://www.w3.org/2000/svg">'+p+'</svg>';
+  }catch(x){return ''}
+}
+function paymName(id){var pm=PAYMS.filter(function(p){return p.id===id})[0];
+  return pm?(LANG==='cn'?pm.cn:pm.en):'Wahda Pay'}
+/* 退款资格：已支付未核销，且活动开始还有 24 小时以上 */
+function evStart(e){var t=new Date((e.start||'').replace(' ','T')).getTime();return isNaN(t)?0:t}
+function refundable(o,e){return o.status==='paid'&&evStart(e)-Date.now()>24*3600*1000}
+function renderTicket(){
+  var o=OSTORE.get(ticketOrderId);if(!o)return;
+  var e=store.get(o.ev);if(!e)return;
+  var used=o.status==='used',refunded=o.status==='refunded';
+  var expired=o.status!=='paid'&&o.status!=='used'&&o.status!=='refunded';
+  var canRef=refundable(o,e);
+  var el=document.getElementById('ticketBody');
+  var tierTxt=e.tiers.filter(function(t){return (o.sel[t.id]||0)>0}).map(function(t){
+    return esc(t.name)+' × '+o.sel[t.id]}).join(' · ');
+  var hero=used?
+    '<div class="okhero used"><div class="ok-ic">✅</div><div><div class="ok-t">'+T('已核销','Ticket verified')+'</div>'+
+    '<div class="ok-s">'+T('核销时间','Verified at')+' '+fdt(o.usedAt)+' · '+T('欢迎入场','Enjoy the event')+'</div></div></div>'
+    :refunded?
+    '<div class="okhero used"><div class="ok-ic">💸</div><div><div class="ok-t">'+T('退款已受理','Refund issued')+'</div>'+
+    '<div class="ok-s">'+T('退款金额','Refunded')+' '+moneyOf(e,o.amt)+' · '+fdt(o.refundedAt)+' · '+T('原路退回 1–3 个工作日','Back to your payment method in 1–3 days')+'</div></div></div>'
+    :'<div class="okhero"><div class="ok-ic">🎉</div><div><div class="ok-t">'+T('支付成功，出票完成','Paid — ticket issued')+'</div>'+
+    '<div class="ok-s">'+T('实付','Paid')+' '+moneyOf(e,o.amt)+' · '+fdt(o.paidAt)+'</div></div></div>';
+
+  /* 状态行 + 退款按钮区 */
+  var acts='';
+  if(o.status==='paid'){
+    acts='<div class="orow-actions">'+
+      '<button class="btn ghost" onclick="shareTicket()">↗ '+T('分享给朋友','Share')+'</button>'+
+      '<button class="btn ghost" style="color:var(--danger);border-color:#F0D2D2"'+(canRef?'':' disabled')+
+        ' onclick="askRefund()">↩ '+T('申请退款','Request refund')+'</button>'+
+    '</div>'+
+    '<div class="orow-actions" style="padding-top:0">'+
+      '<button class="btn" onclick="demoScan()">📷 '+T('模拟主办方扫码核销','Simulate scan')+'</button>'+
+    '</div>'+
+    (canRef?'':'<div class="note" style="margin:0 20px 14px">⚠️ '+
+      T('活动将于 24 小时内开始，已过退款时限（开始前 24 小时以上可退）。','This event starts within 24 hours — the refund window (24+ hours before start) is closed.')+'</div>');
+  }
+
+  el.innerHTML=hero+
+    '<div class="tkt">'+
+      '<div class="tkt-top">'+
+        '<div class="tkt-name">'+esc(e.name)+'</div>'+
+        '<div class="tkt-sub">📅 '+fDate(e.start)+' · '+fTime(e.start)+'<br>📍 '+
+          esc(e.type==='online'?T('线上','Online'):(e.loc||cityOf(e.city)))+'</div>'+
+        (tierTxt?'<div class="tkt-tiers">🎟️ '+tierTxt+'</div>':'')+
+      '</div>'+
+      '<div class="tkt-perf"></div>'+
+      (expired?
+        '<div class="qrwrap dim"><div class="qrbox"></div><div class="qr-cap">'+T('订单状态异常，无法出票','Invalid order status')+'</div></div>'
+        :
+        '<div class="qrwrap'+(used||refunded?' dim':'')+'">'+
+        '<div class="qrbox">'+qrSVG('WAHDA|'+(o.ticket||rTicket())+'|'+o.id)+'</div>'+
+        '<div class="qr-cap">'+(refunded?
+            T('已退款，二维码已失效，不可入场','Refunded — this code is invalid')
+          :used?T('二维码已核销，不可重复使用','This code has already been scanned')
+          :T('入场时出示此二维码，工作人员扫码核销','Show this code at the entrance — staff will scan it'))+'</div>'+
+        '<div class="tkt-code">'+(o.ticket||'—')+'</div>'+
+        '</div>')+
+      '<div class="tkt-bot">'+
+        tkrow(T('订单编号','Order no.'),o.id)+
+        tkrow(T('票号','Ticket no.'),o.ticket||'—')+
+        tkrow(T('支付方式','Paid with'),paymName(o.paym))+
+        tkrow(T('状态','Status'),tkStatus(o))+
+      '</div>'+
+    '</div>'+
+    acts+
+    '<div class="note" style="margin:0 20px 20px">📜 '+T('入场须知：电子票一人一码，扫码后立即失效；请于活动开始前 15 分钟到场；如需退款请在活动开始 24 小时前发起。','Notice: one ticket per code — it becomes invalid once scanned. Arrive 15 minutes early. Refunds must be requested at least 24 hours before the event starts.')+'</div>';
+}
+function tkrow(l,v){return '<div class="tkrow"><span>'+l+'</span><b>'+v+'</b></div>'}
+function tkStatus(o){
+  if(o.status==='paid')return '<span class="chip ok">'+T('已支付','Paid')+'</span>';
+  if(o.status==='used')return '<span class="chip used">'+T('已核销','Used')+'</span>';
+  if(o.status==='refunded')return '<span class="chip refund">'+T('已退款','Refunded')+'</span>';
+  if(o.status==='expired')return '<span class="chip expired">'+T('已失效','Expired')+'</span>';
+  return '<span class="chip pend">'+T('待支付','Unpaid')+'</span>';
+}
+function shareTicket(){try{navigator.clipboard&&navigator.clipboard.writeText(location.href.split('?')[0]+'?t='+(OSTORE.get(ticketOrderId)||{}).id)}catch(x){}
+  toast('票券链接已复制','Ticket link copied')}
+/* 核销演示：模拟主办方扫码 */
+function demoScan(){
+  var o=OSTORE.get(ticketOrderId);if(!o||o.status!=='paid')return;
+  toast('扫码识别中…','Scanning…');
+  setTimeout(function(){
+    var r=OSTORE.use(ticketOrderId);
+    if(r){renderTicket();toast('核销成功，欢迎入场','Verified — enjoy the event')}
+    else{renderTicket();toast('核销失败：票据状态异常','Scan failed: invalid ticket')}
+  },900);
+}
+function openTicket(id){ticketOrderId=id;renderTicket();go('pg-ticket')}
+
+/* ══════════════════════════════════════════════
+   退款（活动开始 24 小时前可退）
+══════════════════════════════════════════════ */
+function askRefund(){
+  var o=OSTORE.get(ticketOrderId);if(!o||o.status!=='paid')return;
+  var e=store.get(o.ev);if(!e)return;
+  var sh=document.getElementById('sheet');
+  sh.innerHTML='<div class="grab"></div>'+
+    '<h4>'+T('申请退款','Request refund')+'</h4>'+
+    '<div class="sh-sub">'+esc(e.name)+' · '+orderQty(o)+' '+T('张','tickets')+'</div>'+
+    '<div class="summ" style="margin:0 0 14px">'+
+      '<div class="summ-r"><span>'+T('退款金额','Refund amount')+'</span><b>'+moneyOf(e,o.amt)+'</b></div>'+
+      '<div class="summ-r"><span>'+T('退回方式','Refund to')+'</span><b>'+paymName(o.paym)+'</b></div>'+
+      '<div class="summ-r"><span>'+T('预计到账','Arrives')+'</span><b>'+T('1–3 个工作日','1–3 business days')+'</b></div>'+
+    '</div>'+
+    '<div class="note" style="margin:0 0 4px">⚠️ '+T('退款后电子票与二维码立即失效，不可再用于入场。','Your e-ticket and QR code become invalid immediately after the refund.')+'</div>'+
+    '<div class="orow-actions" style="padding:14px 0 6px">'+
+      '<button class="btn ghost" onclick="closeSheet()">'+T('取消','Cancel')+'</button>'+
+      '<button class="btn danger" onclick="doRefund()">'+T('确认退款','Confirm refund')+'</button>'+
+    '</div>';
+  openSheet();
+}
+function doRefund(){
+  var o=OSTORE.get(ticketOrderId);if(!o||o.status!=='paid')return;
+  var e=store.get(o.ev);
+  closeSheet();
+  var r=OSTORE.refund(ticketOrderId);
+  if(!r){renderTicket();return}
+  if(e)store.update(e.id,{going:Math.max(0,(e.going||0)-orderQty(r))});
+  toast('退款已受理','Refund requested');
+  renderTicket();
+  if(CUR==='pg-tickets')renderTk();
+}
+
+/* 订单时钟：每秒刷新倒计时 + 自动失效清扫 */
+var ORD_EX_RR={};
+setInterval(function(){
+  var changed=OSTORE.sweep();
+  if(changed){
+    if(CUR==='pg-my')renderMy();
+    if(CUR==='pg-tickets')renderTk();
+    if(CUR==='pg-detail')renderDetail();
+  }
+  if(CUR==='pg-order'){
+    var o=OSTORE.get(orderId);
+    if(o&&o.status==='pending'){
+      var el=document.getElementById('cdTime');
+      if(el)el.textContent=mmss(o.expires-Date.now());
+    }else if(o&&!ORD_EX_RR[o.id]){ORD_EX_RR[o.id]=1;renderOrder();
+      toast('订单已失效','Order expired')}
+  }
+  if(CUR==='pg-tickets'){
+    OSTORE.list().forEach(function(o){
+      if(o.status!=='pending')return;
+      var el2=document.getElementById('myCd'+o.id);
+      if(el2)el2.textContent=mmss(o.expires-Date.now());
+    });
+  }
+},1000);
+
+/* ══════════════════════════════════════════════
+   管理
+══════════════════════════════════════════════ */
+function openManage(id){manageId=id;renderManage();go('pg-manage')}
+function renderManage(){
+  var e=store.get(manageId);if(!e)return;
+  document.getElementById('manageForm').innerHTML=
+    '<div class="card" style="padding:14px;margin-bottom:14px">'+
+      '<div style="font-size:15px;font-weight:800;line-height:1.3">'+esc(e.name)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);margin-top:5px">📅 '+fDate(e.start)+' · '+T('票种','Tickets')+' '+e.tiers.length+'</div>'+
+    '</div>'+
+    '<div class="fs"><div class="fs-t">📊 '+T('库存管理','Stock')+'</div>'+
+    e.tiers.map(function(t,i){
+      return '<div class="te"><div class="te-h"><span class="te-n">'+esc(t.name)+'</span>'+
+        '<span class="tier-s">'+T('剩余','left')+' '+t.stock+'</span></div>'+
+        '<div class="fld"><label>'+T('库存','Stock')+'</label>'+
+        '<input type="number" value="'+t.stock+'" min="0" oninput="store.get(\''+e.id+'\').tiers['+i+'].stock=Math.max(0,parseInt(this.value)||0)"></div></div>';
+    }).join('')+
+    '</div>'+
+    '<button class="btn" style="width:100%;margin-bottom:12px" onclick="saveStock()">'+T('保存库存','Save stock')+'</button>'+
+    '<button class="btn danger" style="width:100%;margin-bottom:20px" onclick="delEvent()">'+T('删除活动','Delete event')+'</button>';
+}
+function saveStock(){var e=store.get(manageId);store.update(manageId,{tiers:e.tiers});toast('库存已更新','Stock updated')}
+function delEvent(){store.remove(manageId);toast('已删除','Deleted');ST.myTab='created';renderMy();go('pg-my')}
+
+/* ══════════════════════════════════════════════
+   渲染全部 + 初始化
+══════════════════════════════════════════════ */
+function renderAll(){
+  renderLoc();renderCats();renderFeatured();renderList();renderMy();
+  if(CUR==='pg-detail')renderDetail();
+  if(CUR==='pg-create')renderCreate();
+  if(CUR==='pg-checkout')renderCheckout();
+  if(CUR==='pg-manage')renderManage();
+  if(CUR==='pg-order')renderOrder();
+  if(CUR==='pg-ticket')renderTicket();
+  if(CUR==='pg-tickets')renderTk();
+}
+function init(){store.list();OSTORE.sweep();renderAll();applyLang()}
+init();
+</script>
+</body>
+</html>
